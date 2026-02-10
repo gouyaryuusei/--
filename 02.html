@@ -457,16 +457,30 @@
                 if (["10代", "20代", "30代", "40代"].includes(age)) warnings.push(`${name}: 若年層配慮`);
                 if (!ins) warnings.push(`${name}: 学び空欄`);
 
+                // バイタル異常値チェック
+                const preS = parseInt(b.querySelector('.v-pre-s').value);
+                const prePr = parseInt(b.querySelector('.v-pre-pr').value);
+                if (preS > 200) warnings.push(`${name}: 安静時血圧(上) ${preS} → 200超`);
+                if (prePr > 120) warnings.push(`${name}: 安静時脈拍 ${prePr} → 120超`);
+
                 let sessionRehabs = []; b.querySelectorAll('.r-chk:checked').forEach(c => {
                     const row = c.closest('.list-row'); sessionRehabs.push({ n: c.value, c: row.querySelector('.r-c').value, s: row.querySelector('.r-s').value, nrs: row.querySelector('.r-nrs').value, bg: row.querySelector('.r-bg').value });
                 });
                 let sessionComps = []; b.querySelectorAll('.c-chk:checked').forEach(c => {
-                    const row = c.closest('.compare-row'); sessionComps.push({ n: c.value, l: row.querySelector('.c-l').value, r: row.querySelector('.c-r').value });
+                    const row = c.closest('.compare-row');
+                    const unit = c.dataset.unit || '';
+                    sessionComps.push({ n: c.value, l: row.querySelector('.c-l').value, r: row.querySelector('.c-r').value, u: unit });
                 });
 
+                // Br.stage
+                const brUe = b.querySelector('.br-ue').value, brHa = b.querySelector('.br-ha').value, brLe = b.querySelector('.br-le').value;
+                // 高次脳・補助具
+                const hbS = b.querySelector('.p-hb').value, hbD = b.querySelector('.p-hb-d').value;
+                const dsS = b.querySelector('.p-ds').value, dsD = b.querySelector('.p-ds-d').value;
+
                 localStorage.setItem(DB_PREFIX + 'full_mem_' + name, JSON.stringify({
-                    p: { age, side, dis, hbS: b.querySelector('.p-hb').value, hbD: b.querySelector('.p-hb-d').value, dsS: b.querySelector('.p-ds').value, dsD: b.querySelector('.p-ds-d').value },
-                    br: { ue: b.querySelector('.br-ue').value, ha: b.querySelector('.br-ha').value, le: b.querySelector('.br-le').value },
+                    p: { age, side, dis, hbS, hbD, dsS, dsD },
+                    br: { ue: brUe, ha: brHa, le: brLe },
                     rehabs: sessionRehabs, comps: sessionComps
                 }));
 
@@ -474,9 +488,32 @@
                 hist.push({ date, vPreS: b.querySelector('.v-pre-s').value, vPrePr: b.querySelector('.v-pre-pr').value, comps: sessionComps });
                 localStorage.setItem(DB_PREFIX + 'hist_' + name, JSON.stringify(hist.slice(-30)));
 
-                note += `【${h}:${m}】 ${name}（${age}・${side || '-'}） 疾患：${side}${dis}\n`;
-                if (b.querySelector('.v-pre-s').value) note += `前: 血圧 ${b.querySelector('.v-pre-s').value}/${b.querySelector('.v-pre-d').value} 脈拍 ${b.querySelector('.v-pre-pr').value} / 後: 血圧 ${b.querySelector('.v-post-s').value}/${b.querySelector('.v-post-d').value}\n`;
-                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => ` ・${r.n} (${r.c}×${r.s}) NRS:${r.nrs || '-'}`).join('\n')}\n`;
+                // ノート出力
+                note += `【${h}:${m}】 ${name}（${age}・${side || '-'}） 疾患：${dis}\n`;
+
+                // バイタル（前後）
+                const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
+                const vPrePrV = b.querySelector('.v-pre-pr').value, vPreBt = b.querySelector('.v-pre-bt').value, vPreSp = b.querySelector('.v-pre-sp').value;
+                const vPostS = b.querySelector('.v-post-s').value, vPostD = b.querySelector('.v-post-d').value;
+                const vPostPr = b.querySelector('.v-post-pr').value, vPostBt = b.querySelector('.v-post-bt').value, vPostSp = b.querySelector('.v-post-sp').value;
+                if (vPreS) note += `前) BP:${vPreS}/${vPreD} PR:${vPrePrV} BT:${vPreBt || '-'}℃ SpO2:${vPreSp || '-'}%\n`;
+                if (vPostS) note += `後) BP:${vPostS}/${vPostD} PR:${vPostPr} BT:${vPostBt || '-'}℃ SpO2:${vPostSp || '-'}%\n`;
+
+                // Br.stage
+                if (side && (brUe !== '-' || brHa !== '-' || brLe !== '-')) {
+                    note += `Br.stage: 上肢${brUe} 手指${brHa} 下肢${brLe}\n`;
+                }
+
+                // 高次脳・補助具
+                if (hbS === 'あり') note += `高次脳機能障害: ${hbD || '詳細未記入'}\n`;
+                if (dsS === 'あり') note += `補助具: ${dsD || '詳細未記入'}\n`;
+
+                // リハ内容（Borg含む）
+                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => ` ・${r.n} (${r.c}×${r.s}) NRS:${r.nrs || '-'} Borg:${r.bg || '-'}`).join('\n')}\n`;
+
+                // 評価項目（左右・単位）
+                if (sessionComps.length) note += `評価:\n${sessionComps.map(c => ` ・${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`).join('\n')}\n`;
+
                 if (ins) note += `学び:\n${ins}\n`;
                 if (b.querySelector('.p-rem').value) note += `備考: ${b.querySelector('.p-rem').value}\n`;
                 note += `\n`;
@@ -512,6 +549,15 @@
         }
 
         window.onload = () => { loadConfig(); document.getElementById('dateInput').valueAsDate = new Date(); addPatientBlock(); };
+
+        // メニュー外クリックで閉じる
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('nav-menu');
+            const menuContainer = document.querySelector('.menu-container');
+            if (menu.style.display === 'block' && !menuContainer.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
     </script>
     <script>
         // Service Worker 登録（PWA オフライン対応）
