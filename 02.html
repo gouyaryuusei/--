@@ -196,7 +196,7 @@
 
         .compare-row {
             display: grid;
-            grid-template-columns: 2.2fr 1fr 1fr 0.5fr;
+            grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
             gap: 5px;
             align-items: center;
             padding: 4px 0;
@@ -227,7 +227,7 @@
         }
 
         .rehab-grid {
-            grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 0.8fr;
+            grid-template-columns: 2fr 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr;
         }
 
         .list-row.checked-row {
@@ -293,6 +293,36 @@
             display: none;
             margin-top: 5px;
         }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .section-header label {
+            margin-bottom: 0;
+        }
+
+        .section-reset-btn {
+            background: none;
+            border: 1px solid #cbd5e1;
+            color: #94a3b8;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 0.6rem;
+            cursor: pointer;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .section-reset-btn:hover {
+            background: #fee2e2;
+            border-color: #f87171;
+            color: #ef4444;
+        }
     </style>
 </head>
 
@@ -303,6 +333,7 @@
         <div class="menu-content" id="nav-menu">
             <button onclick="showCriteria()">📏 中止基準を確認</button>
             <button onclick="generateVerbalScript()">📢 報告用カンペ生成</button>
+            <button onclick="showInsHistory()">📝 学び・備考の履歴</button>
             <button onclick="exportData()">💾 データを保存</button>
             <button onclick="confirmReset()" style="color:var(--warning);">⚠️ 全リセット</button>
         </div>
@@ -310,8 +341,18 @@
 
     <div id="chart-modal" class="modal">
         <div class="modal-body">
-            <h2 id="chart-title">📈 推移グラフ</h2><canvas id="vitalChart"></canvas><canvas id="scoreChart"></canvas><button
-                class="close-btn" onclick="closeModal('chart-modal')">閉じる</button>
+            <h2 id="chart-title">📈 推移グラフ</h2>
+            <div style="margin-bottom:10px;display:flex;gap:6px;">
+                <button onclick="switchChartTab('vital')" id="tab-vital"
+                    style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:var(--primary);color:white;font-weight:bold;cursor:pointer;">🩺
+                    バイタル</button>
+                <button onclick="switchChartTab('score')" id="tab-score"
+                    style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:white;color:var(--primary);font-weight:bold;cursor:pointer;">📊
+                    検査結果</button>
+            </div>
+            <div id="vital-chart-area"><canvas id="vitalChart"></canvas></div>
+            <div id="score-chart-area" style="display:none;"><canvas id="scoreChart"></canvas></div>
+            <button class="close-btn" onclick="closeModal('chart-modal')">閉じる</button>
         </div>
     </div>
     <div id="criteria-modal" class="modal">
@@ -328,6 +369,18 @@
                 onclick="closeModal('script-modal')">閉じる</button>
         </div>
     </div>
+    <div id="ins-history-modal" class="modal">
+        <div class="modal-body">
+            <h2>📝 学び・備考の履歴</h2>
+            <div style="margin-bottom:10px;">
+                <label>患者を選択</label>
+                <select id="ins-history-patient" onchange="loadInsHistory()"
+                    style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;"></select>
+            </div>
+            <div id="ins-history-content" style="max-height:60vh;overflow-y:auto;"></div>
+            <button class="close-btn" onclick="closeModal('ins-history-modal')">閉じる</button>
+        </div>
+    </div>
 
     <div class="container">
         <h1>PT実習ノート：究極コンプリート版</h1>
@@ -342,6 +395,9 @@
         <button onclick="generateNote()"
             style="background:var(--primary); color:white; border:none; padding:15px; width:100%; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold;">ノート生成
             ＆ 全項目を記憶</button>
+        <button onclick="clearAllInputs()"
+            style="background:#f59e0b; color:white; border:none; padding:12px; width:100%; border-radius:8px; cursor:pointer; font-size:0.95rem; font-weight:bold; margin-top:8px;">🗑️
+            すべての入力をクリア</button>
 
         <div id="output"
             style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:20px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem;">
@@ -370,8 +426,111 @@
         function showCriteria() { document.getElementById('criteria-modal').style.display = 'block'; }
         function confirmReset() { if (confirm("全消去しますか？")) { localStorage.clear(); location.reload(); } }
 
-        function saveConfig() { localStorage.setItem(DB_PREFIX + 'config', JSON.stringify({ diseases: document.getElementById('masterDiseases').value, rehabs: document.getElementById('masterRehabs').value, compare: document.getElementById('masterCompare').value })); }
+        function saveConfig() {
+            localStorage.setItem(DB_PREFIX + 'config', JSON.stringify({ diseases: document.getElementById('masterDiseases').value, rehabs: document.getElementById('masterRehabs').value, compare: document.getElementById('masterCompare').value }));
+            syncMasterToBlocks();
+        }
         function loadConfig() { const c = JSON.parse(localStorage.getItem(DB_PREFIX + 'config')); if (c) { document.getElementById('masterDiseases').value = c.diseases; document.getElementById('masterRehabs').value = c.rehabs; document.getElementById('masterCompare').value = c.compare; } }
+
+        function syncMasterToBlocks() {
+            const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
+            const rehabs = document.getElementById('masterRehabs').value.split('\n').filter(v => v);
+            const compares = document.getElementById('masterCompare').value.split('\n').filter(v => v);
+
+            document.querySelectorAll('.patient-block').forEach(b => {
+                // === 疾患リストの同期 ===
+                const disEl = b.querySelector('.p-disease');
+                const curDis = disEl.value;
+                disEl.innerHTML = '<option value="">選択</option>' + diseases.map(d => `<option value="${d}">${d}</option>`).join('');
+                // 以前の選択値があれば復元（マスターに無くても追加）
+                if (curDis) {
+                    if (![...disEl.options].some(o => o.value === curDis)) {
+                        const opt = document.createElement('option'); opt.value = curDis; opt.textContent = curDis; disEl.appendChild(opt);
+                    }
+                    disEl.value = curDis;
+                }
+
+                // === リハメニューの同期 ===
+                const rehabBody = b.querySelector('.rehab-list-body');
+                // 現在の入力状態を保存
+                const rehabState = {};
+                rehabBody.querySelectorAll('.list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk');
+                    rehabState[chk.value] = {
+                        checked: chk.checked,
+                        min: row.querySelector('.r-min').value,
+                        sec: row.querySelector('.r-sec').value,
+                        c: row.querySelector('.r-c').value,
+                        s: row.querySelector('.r-s').value,
+                        nrs: row.querySelector('.r-nrs').value,
+                        bg: row.querySelector('.r-bg').value
+                    };
+                });
+                // 再構築
+                rehabBody.innerHTML = rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-min" style="width:28px;padding:4px;font-size:12px;" placeholder="分">:<input type="text" class="r-sec" style="width:28px;padding:4px;font-size:12px;" placeholder="秒"></div><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('');
+                // 保存した入力状態を復元
+                rehabBody.querySelectorAll('.list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk');
+                    const st = rehabState[chk.value];
+                    if (st) {
+                        chk.checked = st.checked;
+                        if (st.checked) row.classList.add('checked-row');
+                        row.querySelector('.r-min').value = st.min;
+                        row.querySelector('.r-sec').value = st.sec;
+                        row.querySelector('.r-c').value = st.c;
+                        row.querySelector('.r-s').value = st.s;
+                        row.querySelector('.r-nrs').value = st.nrs;
+                        row.querySelector('.r-bg').value = st.bg;
+                    }
+                });
+                // チェック済みを上に並べ替え
+                const rRows = Array.from(rehabBody.children);
+                rRows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1);
+                rRows.forEach(r => rehabBody.appendChild(r));
+
+                // === 評価項目の同期 ===
+                const compBody = b.querySelector('.compare-body');
+                // 現在の入力状態を保存
+                const compState = {};
+                compBody.querySelectorAll('.compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (!chk) return;
+                    compState[chk.value] = {
+                        checked: chk.checked,
+                        side: row.querySelector('.c-side') ? row.querySelector('.c-side').value : 'lr',
+                        r: row.querySelector('.c-r') ? row.querySelector('.c-r').value : '',
+                        l: row.querySelector('.c-l') ? row.querySelector('.c-l').value : '',
+                        val: row.querySelector('.c-val') ? row.querySelector('.c-val').value : ''
+                    };
+                });
+                // 再構築
+                const sideVal = b.querySelector('.p-side').value;
+                compBody.innerHTML = `<div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>` +
+                    compares.map(item => {
+                        const [n, u] = item.split(':');
+                        return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
+                    }).join('');
+                // 保存した入力状態を復元
+                compBody.querySelectorAll('.compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (!chk) return;
+                    const st = compState[chk.value];
+                    if (st) {
+                        chk.checked = st.checked;
+                        const sideEl = row.querySelector('.c-side');
+                        if (sideEl) { sideEl.value = st.side; toggleCompSide(sideEl); }
+                        if (st.side === 'none') {
+                            if (row.querySelector('.c-val')) row.querySelector('.c-val').value = st.val || st.l || '';
+                        } else {
+                            if (row.querySelector('.c-r')) row.querySelector('.c-r').value = st.r;
+                            if (row.querySelector('.c-l')) row.querySelector('.c-l').value = st.l;
+                        }
+                    }
+                });
+                // 麻痺側ハイライト再適用
+                highlight(b.querySelector('.p-side'));
+            });
+        }
 
         function filterList(input, cls) { const q = input.value.toLowerCase(); input.closest('.patient-block').querySelectorAll(`.${cls} .list-row`).forEach(r => r.classList.toggle('hidden', !r.textContent.toLowerCase().includes(q))); }
 
@@ -392,56 +551,139 @@
                 <div style="width:70px;"><label>麻痺側</label><select class="p-side" onchange="highlight(this)"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div>
                 <div class="col"><label>疾患</label><select class="p-disease"><option value="">選択</option>${diseases.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
             </div>
+            <div class="section-header"><label>🩺 バイタル</label><button class="section-reset-btn" onclick="resetVitals(this)">リセット</button></div>
             <div class="row">${['pre', 'post'].map(p => `<div class="vital-sub-block"><div style="font-size:0.7rem;font-weight:bold">${p === 'pre' ? 'リハ前' : 'リハ後'}</div><div class="vital-grid"><div><label>血圧</label><div style="display:flex;gap:2px"><input type="text" class="v-${p}-s" style="width:35px">/<input type="text" class="v-${p}-d" style="width:35px"></div></div><div><label>脈拍</label><input type="text" class="v-${p}-pr"></div><div><label>体温</label><input type="text" class="v-${p}-bt"></div><div><label>SpO2</label><input type="text" class="v-${p}-sp"></div></div></div>`).join('')}</div>
             
-            <label>📋 リハ内容検索</label>
+            <div class="section-header"><label>📋 リハ内容検索</label><button class="section-reset-btn" onclick="resetRehabs(this)">リセット</button></div>
             <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'rehab-list-body')">
-            <div class="list-container"><div class="rehab-list-body">${rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('')}</div></div>
+            <div class="list-container"><div class="rehab-list-body">${rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-min" style="width:28px;padding:4px;font-size:12px;" placeholder="分">:<input type="text" class="r-sec" style="width:28px;padding:4px;font-size:12px;" placeholder="秒"></div><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('')}</div></div>
             
-            <label>🧠 Br.stage</label>
+            <div class="section-header"><label>🧠 Br.stage</label><button class="section-reset-btn" onclick="resetBrstage(this)">リセット</button></div>
             <div class="row" style="background:#f1f5f9; padding:5px; border-radius:5px;"><div class="col" style="display:flex; gap:10px;"><label>上肢<select class="br-ue">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label><label>手指<select class="br-ha">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label><label>下肢<select class="br-le">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label></div></div>
 
-            <label>⚖️ 左右評価・検査検索</label>
+            <div class="section-header"><label>⚖️ 左右評価・検査検索</label><button class="section-reset-btn" onclick="resetComps(this)">リセット</button></div>
             <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'compare-body')">
             <div class="compare-container"><div class="compare-body">
-                <div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>左</div><div>右</div><div>単位</div></div>
+                <div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>
                 ${compares.map(item => {
                 const [n, u] = item.split(':');
-                return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><input type="text" class="c-l in-l"><input type="text" class="c-r in-r"><div>${u || ''}</div></div>`;
+                return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
             }).join('')}
             </div></div>
 
-            <div class="row"><div class="col"><label>💡 学び・アセスメント（⚠️重要）</label><textarea class="p-ins" rows="4"></textarea></div></div>
-            <div class="row"><div class="col"><label>💬 備考（大型）</label><textarea class="p-rem" rows="4"></textarea></div></div>
+            <div class="row"><div class="col"><div class="section-header"><label>💡 学び・アセスメント（⚠️重要）</label><button class="section-reset-btn" onclick="resetTextarea(this, '.p-ins')">リセット</button></div><textarea class="p-ins" rows="4"></textarea></div></div>
+            <div class="row"><div class="col"><div class="section-header"><label>💬 備考（大型）</label><button class="section-reset-btn" onclick="resetTextarea(this, '.p-rem')">リセット</button></div><textarea class="p-rem" rows="4"></textarea></div></div>
             <div class="row">
-                <div class="col"><label>🧠 高次脳</label><select class="p-hb" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-hb-d detail-input"></div>
-                <div class="col"><label>🩼 補助具</label><select class="p-ds" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-ds-d detail-input"></div>
+                <div class="col"><div class="section-header"><label>🧠 高次脳</label><button class="section-reset-btn" onclick="resetHbDs(this, '.p-hb', '.p-hb-d')">リセット</button></div><select class="p-hb" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-hb-d detail-input"></div>
+                <div class="col"><div class="section-header"><label>🩼 補助具</label><button class="section-reset-btn" onclick="resetHbDs(this, '.p-ds', '.p-ds-d')">リセット</button></div><select class="p-ds" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-ds-d detail-input"></div>
             </div>
         `;
             list.appendChild(block);
+            // 追加直後に保存済みデータがあれば自動復元（関数定義順の問題を回避）
+            const nameEl = block.querySelector('.p-name');
+            if (nameEl) {
+                setTimeout(() => sync(nameEl), 0);
+            }
         }
 
-        function sortR(el) { const b = el.closest('.rehab-list-body'); const rows = Array.from(b.children); rows.sort((a, b) => (a.querySelector('input').checked === b.querySelector('input').checked) ? 0 : a.querySelector('input').checked ? -1 : 1); rows.forEach(r => { r.classList.toggle('checked-row', r.querySelector('input').checked); b.appendChild(r); }); }
+        function sortR(el) { const b = el.closest('.rehab-list-body'); const rows = Array.from(b.children); rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1); rows.forEach(r => { r.classList.toggle('checked-row', r.querySelector('input').checked); b.appendChild(r); }); }
         function tgD(el) { el.nextElementSibling.style.display = (el.value === "あり") ? "block" : "none"; }
         function highlight(el) { const b = el.closest('.patient-block'); b.querySelectorAll('.in-l').forEach(i => i.classList.toggle('paralysis-highlight', el.value === '左')); b.querySelectorAll('.in-r').forEach(i => i.classList.toggle('paralysis-highlight', el.value === '右')); }
 
+        function toggleCompSide(sel) {
+            const row = sel.closest('.compare-row');
+            const cL = row.querySelector('.c-l');
+            const cR = row.querySelector('.c-r');
+            const cV = row.querySelector('.c-val');
+            const v = sel.value;
+            if (v === 'lr') { cR.style.display = ''; cL.style.display = ''; cV.style.display = 'none'; }
+            else if (v === 'l') { cR.style.display = 'none'; cR.value = ''; cL.style.display = ''; cV.style.display = 'none'; }
+            else if (v === 'r') { cR.style.display = ''; cL.style.display = 'none'; cL.value = ''; cV.style.display = 'none'; }
+            else { cR.style.display = 'none'; cR.value = ''; cL.style.display = 'none'; cL.value = ''; cV.style.display = ''; }
+        }
+
         function sync(el) {
             const name = el.value; const b = el.closest('.patient-block');
-            const data = JSON.parse(localStorage.getItem(DB_PREFIX + 'full_mem_' + name));
-            if (!data) return;
-            b.querySelector('.p-age').value = data.p.age; b.querySelector('.p-side').value = data.p.side; b.querySelector('.p-disease').value = data.p.dis;
-            b.querySelector('.p-hb').value = data.p.hbS; tgD(b.querySelector('.p-hb')); b.querySelector('.p-hb-d').value = data.p.hbD;
-            b.querySelector('.p-ds').value = data.p.dsS; tgD(b.querySelector('.p-ds')); b.querySelector('.p-ds-d').value = data.p.dsD;
-            highlight(b.querySelector('.p-side'));
-            b.querySelector('.br-ue').value = data.br.ue; b.querySelector('.br-ha').value = data.br.ha; b.querySelector('.br-le').value = data.br.le;
-            b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
-                const chk = row.querySelector('.r-chk'); const s = data.rehabs.find(r => r.n === chk.value);
-                if (s) { chk.checked = true; row.querySelector('.r-c').value = s.c; row.querySelector('.r-s').value = s.s; row.querySelector('.r-nrs').value = s.nrs; row.querySelector('.r-bg').value = s.bg; } else { chk.checked = false; }
-            });
-            b.querySelectorAll('.compare-body .compare-row').forEach(row => {
-                const chk = row.querySelector('.c-chk'); if (!chk) return; const s = data.comps.find(c => c.n === chk.value);
-                if (s) { chk.checked = true; row.querySelector('.c-l').value = s.l; row.querySelector('.c-r').value = s.r; } else { chk.checked = false; }
-            });
+            let raw;
+            try { raw = localStorage.getItem(DB_PREFIX + 'full_mem_' + name); } catch (e) { return; }
+            if (!raw) return;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+            if (!data || !data.p) return;
+
+            const p = data.p;
+            if (p.age) b.querySelector('.p-age').value = p.age;
+            if (p.side) { b.querySelector('.p-side').value = p.side; highlight(b.querySelector('.p-side')); }
+            if (p.dis) {
+                const diseaseEl = b.querySelector('.p-disease');
+                // 選択肢にない場合はoptionを追加
+                if (![...diseaseEl.options].some(o => o.value === p.dis)) {
+                    const opt = document.createElement('option'); opt.value = p.dis; opt.textContent = p.dis; diseaseEl.appendChild(opt);
+                }
+                diseaseEl.value = p.dis;
+            }
+            if (p.hbS !== undefined) { b.querySelector('.p-hb').value = p.hbS; tgD(b.querySelector('.p-hb')); }
+            if (p.hbD !== undefined) b.querySelector('.p-hb-d').value = p.hbD;
+            if (p.dsS !== undefined) { b.querySelector('.p-ds').value = p.dsS; tgD(b.querySelector('.p-ds')); }
+            if (p.dsD !== undefined) b.querySelector('.p-ds-d').value = p.dsD;
+            // 時間の復元
+            if (p.h) b.querySelector('.p-h').value = p.h;
+            if (p.m !== undefined) b.querySelector('.p-m').value = p.m;
+            // 学び・備考を復元
+            if (p.ins !== undefined) b.querySelector('.p-ins').value = p.ins;
+            if (p.rem !== undefined) b.querySelector('.p-rem').value = p.rem;
+
+            // Br.stage
+            if (data.br) {
+                if (data.br.ue !== undefined) b.querySelector('.br-ue').value = data.br.ue;
+                if (data.br.ha !== undefined) b.querySelector('.br-ha').value = data.br.ha;
+                if (data.br.le !== undefined) b.querySelector('.br-le').value = data.br.le;
+            }
+
+            // バイタル（前後）の復元
+            if (data.vitals) {
+                const v = data.vitals;
+                if (v.preS) b.querySelector('.v-pre-s').value = v.preS;
+                if (v.preD) b.querySelector('.v-pre-d').value = v.preD;
+                if (v.prePr) b.querySelector('.v-pre-pr').value = v.prePr;
+                if (v.preBt) b.querySelector('.v-pre-bt').value = v.preBt;
+                if (v.preSp) b.querySelector('.v-pre-sp').value = v.preSp;
+                if (v.postS) b.querySelector('.v-post-s').value = v.postS;
+                if (v.postD) b.querySelector('.v-post-d').value = v.postD;
+                if (v.postPr) b.querySelector('.v-post-pr').value = v.postPr;
+                if (v.postBt) b.querySelector('.v-post-bt').value = v.postBt;
+                if (v.postSp) b.querySelector('.v-post-sp').value = v.postSp;
+            }
+
+            // リハビリ内容の復元
+            if (data.rehabs) {
+                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk'); const s = data.rehabs.find(r => r.n === chk.value);
+                    if (s) { chk.checked = true; row.classList.add('checked-row'); if (s.min !== undefined && s.min !== '') row.querySelector('.r-min').value = s.min; if (s.sec !== undefined && s.sec !== '') row.querySelector('.r-sec').value = s.sec; row.querySelector('.r-c').value = s.c; row.querySelector('.r-s').value = s.s; row.querySelector('.r-nrs').value = s.nrs; row.querySelector('.r-bg').value = s.bg; } else { chk.checked = false; row.classList.remove('checked-row'); }
+                });
+                // チェック済みアイテムを上に並べ替え
+                const body = b.querySelector('.rehab-list-body');
+                const rows = Array.from(body.children);
+                rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1);
+                rows.forEach(r => body.appendChild(r));
+            }
+
+            // 評価項目の復元
+            if (data.comps) {
+                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk'); if (!chk) return; const s = data.comps.find(c => c.n === chk.value);
+                    if (s) {
+                        chk.checked = true;
+                        if (s.sd) { const sideEl = row.querySelector('.c-side'); sideEl.value = s.sd; toggleCompSide(sideEl); }
+                        if (s.sd === 'none') {
+                            row.querySelector('.c-val').value = s.l || '';
+                        } else {
+                            if (row.querySelector('.c-l')) row.querySelector('.c-l').value = s.l || '';
+                            if (row.querySelector('.c-r')) row.querySelector('.c-r').value = s.r || '';
+                        }
+                    } else { chk.checked = false; }
+                });
+            }
         }
 
         function generateNote() {
@@ -464,12 +706,17 @@
                 if (prePr > 120) warnings.push(`${name}: 安静時脈拍 ${prePr} → 120超`);
 
                 let sessionRehabs = []; b.querySelectorAll('.r-chk:checked').forEach(c => {
-                    const row = c.closest('.list-row'); sessionRehabs.push({ n: c.value, c: row.querySelector('.r-c').value, s: row.querySelector('.r-s').value, nrs: row.querySelector('.r-nrs').value, bg: row.querySelector('.r-bg').value });
+                    const row = c.closest('.list-row'); sessionRehabs.push({ n: c.value, min: row.querySelector('.r-min').value, sec: row.querySelector('.r-sec').value, c: row.querySelector('.r-c').value, s: row.querySelector('.r-s').value, nrs: row.querySelector('.r-nrs').value, bg: row.querySelector('.r-bg').value });
                 });
                 let sessionComps = []; b.querySelectorAll('.c-chk:checked').forEach(c => {
                     const row = c.closest('.compare-row');
                     const unit = c.dataset.unit || '';
-                    sessionComps.push({ n: c.value, l: row.querySelector('.c-l').value, r: row.querySelector('.c-r').value, u: unit });
+                    const sd = row.querySelector('.c-side').value;
+                    if (sd === 'none') {
+                        sessionComps.push({ n: c.value, sd, l: row.querySelector('.c-val').value, r: '', u: unit });
+                    } else {
+                        sessionComps.push({ n: c.value, sd, l: row.querySelector('.c-l').value, r: row.querySelector('.c-r').value, u: unit });
+                    }
                 });
 
                 // Br.stage
@@ -478,14 +725,31 @@
                 const hbS = b.querySelector('.p-hb').value, hbD = b.querySelector('.p-hb-d').value;
                 const dsS = b.querySelector('.p-ds').value, dsD = b.querySelector('.p-ds-d').value;
 
+                // 学び・備考を日付付き履歴として保存
+                const rem = b.querySelector('.p-rem').value.trim();
+                if (ins || rem) {
+                    let insHist = JSON.parse(localStorage.getItem(DB_PREFIX + 'ins_hist_' + name)) || [];
+                    insHist.push({ date, ins: ins, rem: rem });
+                    localStorage.setItem(DB_PREFIX + 'ins_hist_' + name, JSON.stringify(insHist.slice(-50)));
+                }
+
                 localStorage.setItem(DB_PREFIX + 'full_mem_' + name, JSON.stringify({
-                    p: { age, side, dis, hbS, hbD, dsS, dsD },
+                    p: { age, side, dis, hbS, hbD, dsS, dsD, h, m, ins, rem },
                     br: { ue: brUe, ha: brHa, le: brLe },
+                    vitals: {
+                        preS: b.querySelector('.v-pre-s').value, preD: b.querySelector('.v-pre-d').value,
+                        prePr: b.querySelector('.v-pre-pr').value, preBt: b.querySelector('.v-pre-bt').value, preSp: b.querySelector('.v-pre-sp').value,
+                        postS: b.querySelector('.v-post-s').value, postD: b.querySelector('.v-post-d').value,
+                        postPr: b.querySelector('.v-post-pr').value, postBt: b.querySelector('.v-post-bt').value, postSp: b.querySelector('.v-post-sp').value
+                    },
                     rehabs: sessionRehabs, comps: sessionComps
                 }));
 
                 let hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
-                hist.push({ date, vPreS: b.querySelector('.v-pre-s').value, vPrePr: b.querySelector('.v-pre-pr').value, comps: sessionComps });
+                // 同じ日付のエントリがあれば上書き
+                const existIdx = hist.findIndex(h => h.date === date);
+                const histEntry = { date, vPreS: b.querySelector('.v-pre-s').value, vPrePr: b.querySelector('.v-pre-pr').value, comps: sessionComps };
+                if (existIdx >= 0) { hist[existIdx] = histEntry; } else { hist.push(histEntry); }
                 localStorage.setItem(DB_PREFIX + 'hist_' + name, JSON.stringify(hist.slice(-30)));
 
                 // ノート出力
@@ -508,11 +772,16 @@
                 if (hbS === 'あり') note += `高次脳機能障害: ${hbD || '詳細未記入'}\n`;
                 if (dsS === 'あり') note += `補助具: ${dsD || '詳細未記入'}\n`;
 
-                // リハ内容（Borg含む）
-                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => ` ・${r.n} (${r.c}×${r.s}) NRS:${r.nrs || '-'} Borg:${r.bg || '-'}`).join('\n')}\n`;
+                // リハ内容（時間・Borg含む）
+                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => { let t = ''; if (r.min || r.sec) t = ` ${r.min || '0'}分${r.sec || '0'}秒`; return ` ・${r.n}${t} (${r.c}×${r.s}) NRS:${r.nrs || '-'} Borg:${r.bg || '-'}`; }).join('\n')}\n`;
 
                 // 評価項目（左右・単位）
-                if (sessionComps.length) note += `評価:\n${sessionComps.map(c => ` ・${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`).join('\n')}\n`;
+                if (sessionComps.length) note += `評価:\n${sessionComps.map(c => {
+                    if (c.sd === 'lr') return ` ・${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`;
+                    if (c.sd === 'l') return ` ・${c.n}: 左${c.l || '-'} ${c.u}`;
+                    if (c.sd === 'r') return ` ・${c.n}: 右${c.r || '-'} ${c.u}`;
+                    return ` ・${c.n}: ${c.l || c.r || '-'} ${c.u}`;
+                }).join('\n')}\n`;
 
                 if (ins) note += `学び:\n${ins}\n`;
                 if (b.querySelector('.p-rem').value) note += `備考: ${b.querySelector('.p-rem').value}\n`;
@@ -521,18 +790,174 @@
 
             if (warnings.length > 0 && !confirm("警告があります。出力しますか？\n" + warnings.join("\n"))) return;
             document.getElementById('output').innerText = note; document.getElementById('output').style.display = 'block';
-            navigator.clipboard.writeText(note).then(() => alert("作成完了！全データを記憶しました。"));
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(note).then(() => alert("作成完了！全データを記憶しました。")).catch(() => alert("作成完了！（クリップボードは手動でコピーしてください）"));
+            } else {
+                alert("作成完了！（クリップボードは手動でコピーしてください）");
+            }
+        }
+
+        let currentChartName = '';
+
+        function switchChartTab(tab) {
+            document.getElementById('vital-chart-area').style.display = tab === 'vital' ? 'block' : 'none';
+            document.getElementById('score-chart-area').style.display = tab === 'score' ? 'block' : 'none';
+            document.getElementById('tab-vital').style.background = tab === 'vital' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-vital').style.color = tab === 'vital' ? 'white' : 'var(--primary)';
+            document.getElementById('tab-score').style.background = tab === 'score' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-score').style.color = tab === 'score' ? 'white' : 'var(--primary)';
+            if (tab === 'score') renderScoreChart(currentChartName);
         }
 
         function openChartModal(name) {
+            currentChartName = name;
             document.getElementById('chart-title').innerText = `${name} 推移`;
             const history = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
             if (!history.length) return alert("データ不足");
             if (vitalChartInstance) vitalChartInstance.destroy();
             vitalChartInstance = new Chart(document.getElementById('vitalChart'), {
-                type: 'line', data: { labels: history.map(h => h.date), datasets: [{ label: '血圧(上)', data: history.map(h => h.vPreS), borderColor: '#ef4444' }, { label: '脈拍', data: history.map(h => h.vPrePr), borderColor: '#3b82f6' }] }
+                type: 'line', data: {
+                    labels: history.map(h => h.date), datasets: [
+                        { label: '血圧(上)', data: history.map(h => parseInt(h.vPreS) || null), borderColor: '#ef4444', pointRadius: 4, borderWidth: 2 },
+                        { label: '脈拍', data: history.map(h => parseInt(h.vPrePr) || null), borderColor: '#3b82f6', pointRadius: 4, borderWidth: 2 }
+                    ]
+                }
             });
+            switchChartTab('vital');
             document.getElementById('chart-modal').style.display = 'block';
+        }
+
+        function renderScoreChart(name) {
+            const history = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
+            if (!history.length) return;
+            // 全履歴から検査項目名を収集
+            const itemNames = new Set();
+            history.forEach(h => { if (h.comps) h.comps.forEach(c => itemNames.add(c.n)); });
+            if (!itemNames.size) {
+                if (scoreChartInstance) { scoreChartInstance.destroy(); scoreChartInstance = null; }
+                const area = document.getElementById('score-chart-area');
+                let msg = area.querySelector('.no-data-msg');
+                if (!msg) { msg = document.createElement('p'); msg.className = 'no-data-msg'; msg.style.cssText = 'color:#94a3b8;text-align:center;padding:30px 0;'; area.insertBefore(msg, area.firstChild); }
+                msg.textContent = '検査結果の履歴がまだありません';
+                document.getElementById('scoreChart').style.display = 'none';
+                return;
+            }
+            const oldMsg = document.getElementById('score-chart-area').querySelector('.no-data-msg');
+            if (oldMsg) oldMsg.remove();
+            document.getElementById('scoreChart').style.display = '';
+
+            // 値のパース（"0"もnullではなく0として扱う）
+            function parseVal(v) {
+                if (v === undefined || v === null || v === '') return null;
+                const n = parseFloat(v);
+                return isNaN(n) ? null : n;
+            }
+
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+            const datasets = [];
+            let idx = 0;
+            itemNames.forEach(itemName => {
+                // 空文字列ではなく実際に値が存在するかチェック
+                const hasL = history.some(h => h.comps && h.comps.find(cc => cc.n === itemName && cc.l !== undefined && cc.l !== ''));
+                const hasR = history.some(h => h.comps && h.comps.find(cc => cc.n === itemName && cc.r !== undefined && cc.r !== ''));
+                const color = colors[idx % colors.length];
+                const baseOpts = { tension: 0.3, spanGaps: true, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2, yAxisID: 'y' + idx };
+                if (hasL) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: `${itemName}(左)`,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); return cc ? parseVal(cc.l) : null; }),
+                        borderColor: color, backgroundColor: color + '20'
+                    });
+                }
+                if (hasR) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: `${itemName}(右)`,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); return cc ? parseVal(cc.r) : null; }),
+                        borderColor: color, backgroundColor: color + '20', borderDash: [5, 5]
+                    });
+                }
+                // 左右どちらも空の場合でも項目自体は存在するので表示
+                if (!hasL && !hasR) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: itemName,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); if (!cc) return null; return parseVal(cc.l) !== null ? parseVal(cc.l) : parseVal(cc.r); }),
+                        borderColor: color, backgroundColor: color + '20'
+                    });
+                }
+                idx++;
+            });
+            // 多軸設定（全軸を表示、見やすさのため交互に左右配置）
+            const scales = { x: { display: true, ticks: { font: { size: 10 } } } };
+            let axisIdx = 0;
+            const totalAxes = itemNames.size;
+            itemNames.forEach(itemName => {
+                const unit = history.flatMap(h => (h.comps || []).filter(cc => cc.n === itemName && cc.u)).map(cc => cc.u)[0] || '';
+                scales['y' + axisIdx] = {
+                    type: 'linear', display: true,
+                    position: axisIdx % 2 === 0 ? 'left' : 'right',
+                    title: { display: true, text: `${itemName}${unit ? '(' + unit + ')' : ''}`, font: { size: totalAxes > 4 ? 8 : 10 } },
+                    ticks: { font: { size: totalAxes > 4 ? 8 : 10 } },
+                    grid: { drawOnChartArea: axisIdx === 0 }
+                };
+                axisIdx++;
+            });
+            if (scoreChartInstance) scoreChartInstance.destroy();
+            scoreChartInstance = new Chart(document.getElementById('scoreChart'), {
+                type: 'line',
+                data: { labels: history.map(h => h.date), datasets },
+                options: {
+                    responsive: true, interaction: { mode: 'index', intersect: false }, scales,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } },
+                        tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y : '-'); } } }
+                    }
+                }
+            });
+        }
+
+        function showInsHistory() {
+            const sel = document.getElementById('ins-history-patient');
+            sel.innerHTML = '<option value="">-- 患者を選択 --</option>';
+            // localStorageからins_hist_のある患者名を収集
+            const patients = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(DB_PREFIX + 'ins_hist_')) {
+                    patients.push(k.replace(DB_PREFIX + 'ins_hist_', ''));
+                }
+            }
+            patients.sort();
+            patients.forEach(p => {
+                const opt = document.createElement('option'); opt.value = p; opt.textContent = p; sel.appendChild(opt);
+            });
+            document.getElementById('ins-history-content').innerHTML = patients.length ? '<p style="color:#94a3b8;text-align:center;">患者を選択してください</p>' : '<p style="color:#94a3b8;text-align:center;">まだ履歴がありません</p>';
+            document.getElementById('ins-history-modal').style.display = 'block';
+        }
+
+        function escHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function loadInsHistory() {
+            const name = document.getElementById('ins-history-patient').value;
+            const cont = document.getElementById('ins-history-content');
+            if (!name) { cont.innerHTML = '<p style="color:#94a3b8;text-align:center;">患者を選択してください</p>'; return; }
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'ins_hist_' + name)) || [];
+            if (!hist.length) { cont.innerHTML = '<p style="color:#94a3b8;text-align:center;">履歴がありません</p>'; return; }
+            // 新しい順に表示
+            const reversed = [...hist].reverse();
+            let html = '';
+            reversed.forEach((entry, i) => {
+                html += `<div style="border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; background:${i % 2 === 0 ? '#f8fafc' : '#fff'};">`;
+                html += `<div style="font-weight:bold; color:var(--primary); font-size:0.85rem; margin-bottom:5px;">📅 ${escHtml(entry.date || '日付なし')}</div>`;
+                if (entry.ins) html += `<div style="margin-bottom:4px;"><span style="font-weight:bold;color:#475569;font-size:0.75rem;">💡 学び・アセスメント</span><div style="white-space:pre-wrap;font-size:0.8rem;padding:5px;background:#f0fdf4;border-radius:4px;border:1px solid #bbf7d0;">${escHtml(entry.ins)}</div></div>`;
+                if (entry.rem) html += `<div><span style="font-weight:bold;color:#475569;font-size:0.75rem;">💬 備考</span><div style="white-space:pre-wrap;font-size:0.8rem;padding:5px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe;">${escHtml(entry.rem)}</div></div>`;
+                html += '</div>';
+            });
+            cont.innerHTML = html;
         }
 
         function generateVerbalScript() {
@@ -546,6 +971,95 @@
             const data = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith(DB_PREFIX)) data[k] = localStorage.getItem(k); }
             const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `PT_Practice_Backup.json`; a.click();
+        }
+
+        // === セクション別リセット関数 ===
+        function resetVitals(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.v-pre-s,.v-pre-d,.v-pre-pr,.v-pre-bt,.v-pre-sp,.v-post-s,.v-post-d,.v-post-pr,.v-post-bt,.v-post-sp').forEach(el => el.value = '');
+        }
+        function resetRehabs(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                row.querySelector('.r-chk').checked = false;
+                row.classList.remove('checked-row');
+                row.querySelector('.r-min').value = '';
+                row.querySelector('.r-sec').value = '';
+                row.querySelector('.r-c').selectedIndex = 0;
+                row.querySelector('.r-s').selectedIndex = 0;
+                row.querySelector('.r-nrs').selectedIndex = 0;
+                row.querySelector('.r-bg').selectedIndex = 0;
+            });
+        }
+        function resetBrstage(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.br-ue, .br-ha, .br-le').forEach(s => s.value = '-');
+        }
+        function resetComps(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                const chk = row.querySelector('.c-chk');
+                if (chk) {
+                    chk.checked = false;
+                    const sideEl = row.querySelector('.c-side');
+                    if (sideEl) { sideEl.value = 'lr'; toggleCompSide(sideEl); }
+                    if (row.querySelector('.c-r')) row.querySelector('.c-r').value = '';
+                    if (row.querySelector('.c-l')) row.querySelector('.c-l').value = '';
+                    if (row.querySelector('.c-val')) row.querySelector('.c-val').value = '';
+                }
+            });
+        }
+        function resetTextarea(btn, cls) {
+            const b = btn.closest('.patient-block');
+            b.querySelector(cls).value = '';
+        }
+        function resetHbDs(btn, selCls, inputCls) {
+            const b = btn.closest('.patient-block');
+            const sel = b.querySelector(selCls);
+            sel.value = 'なし'; tgD(sel);
+            b.querySelector(inputCls).value = '';
+        }
+
+        function clearAllInputs() {
+            if (!confirm('すべての入力項目をクリアしますか？\n（記憶済みのデータには影響しません）')) return;
+            document.querySelectorAll('.patient-block').forEach(b => {
+                // テキスト入力・テキストエリアをクリア
+                b.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
+                // セレクトをデフォルトに
+                b.querySelector('.p-age').selectedIndex = 0;
+                b.querySelector('.p-side').value = '';
+                highlight(b.querySelector('.p-side'));
+                b.querySelector('.p-disease').selectedIndex = 0;
+                b.querySelector('.p-hb').value = 'なし'; tgD(b.querySelector('.p-hb'));
+                b.querySelector('.p-ds').value = 'なし'; tgD(b.querySelector('.p-ds'));
+                b.querySelectorAll('.br-ue, .br-ha, .br-le').forEach(s => s.value = '-');
+                // リハ内容のチェックを外してリセット
+                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                    row.querySelector('.r-chk').checked = false;
+                    row.classList.remove('checked-row');
+                    row.querySelector('.r-min').value = '';
+                    row.querySelector('.r-sec').value = '';
+                    row.querySelector('.r-c').selectedIndex = 0;
+                    row.querySelector('.r-s').selectedIndex = 0;
+                    row.querySelector('.r-nrs').selectedIndex = 0;
+                    row.querySelector('.r-bg').selectedIndex = 0;
+                });
+                // 評価項目のチェックを外してリセット
+                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (chk) {
+                        chk.checked = false;
+                        const sideEl = row.querySelector('.c-side');
+                        if (sideEl) { sideEl.value = 'lr'; toggleCompSide(sideEl); }
+                        if (row.querySelector('.c-r')) row.querySelector('.c-r').value = '';
+                        if (row.querySelector('.c-l')) row.querySelector('.c-l').value = '';
+                        if (row.querySelector('.c-val')) row.querySelector('.c-val').value = '';
+                    }
+                });
+            });
+            // 出力エリアも非表示に
+            document.getElementById('output').style.display = 'none';
+            document.getElementById('output').innerText = '';
         }
 
         window.onload = () => { loadConfig(); document.getElementById('dateInput').valueAsDate = new Date(); addPatientBlock(); };
