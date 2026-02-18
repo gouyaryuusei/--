@@ -335,8 +335,10 @@
             <button onclick="generateVerbalScript()">📢 報告用カンペ生成</button>
             <button onclick="showInsHistory()">📝 学び・備考の履歴</button>
             <button onclick="exportData()">💾 データを保存</button>
+            <button onclick="importData()">📂 データを復元</button>
             <button onclick="confirmReset()" style="color:var(--warning);">⚠️ 全リセット</button>
         </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
     </div>
 
     <div id="chart-modal" class="modal">
@@ -382,6 +384,10 @@
         </div>
     </div>
 
+    <div id="data-status-bar"
+        style="display:none; position:fixed; bottom:0; left:0; right:0; padding:10px 15px; font-size:0.8rem; z-index:999; text-align:center; transition:opacity 0.5s;">
+    </div>
+
     <div class="container">
         <h1>PT実習ノート：究極コンプリート版</h1>
         <div id="warning-box"></div>
@@ -418,7 +424,7 @@
 
     <script>
         const DB_PREFIX = 'pt_final_v34_';
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        const alphabet = (() => { const a = []; const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""); L.forEach(c => a.push(c)); L.forEach(c => a.push("A" + c)); L.forEach(c => a.push("B" + c)); return a; })();
         let vitalChartInstance = null; let scoreChartInstance = null;
 
         function toggleMenu() { const m = document.getElementById('nav-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
@@ -545,11 +551,12 @@
             block.innerHTML = `
             <button class="del-btn" onclick="this.parentElement.remove()">削除</button>
             <div class="row">
-                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
+                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
                 <div class="col"><label>氏名</label><div style="display:flex;gap:4px"><select class="p-name" onchange="sync(this)">${alphabet.map(n => `<option value="${n}さん">${n}さん</option>`).join('')}</select><button class="menu-btn" style="width:30px;height:30px;font-size:0.8rem" onclick="openChartModal(this.previousElementSibling.value)">📈</button></div></div>
                 <div style="width:75px;"><label>年齢</label><select class="p-age">${Array.from({ length: 9 }, (_, i) => `<option value="${(i + 1) * 10}代">${(i + 1) * 10}代</option>`).join('')}</select></div>
+                <div style="width:65px;"><label>性別</label><select class="p-sex"><option value="">-</option><option value="男性">男性</option><option value="女性">女性</option></select></div>
                 <div style="width:70px;"><label>麻痺側</label><select class="p-side" onchange="highlight(this)"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div>
-                <div class="col"><label>疾患</label><select class="p-disease"><option value="">選択</option>${diseases.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div>
+                <div class="col"><label>疾患</label><div style="display:flex;gap:4px"><select class="p-disease"><option value="">選択</option>${diseases.map(d => `<option value="${d}">${d}</option>`).join('')}</select><select class="p-dis-side" style="width:55px;"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div></div>
             </div>
             <div class="section-header"><label>🩺 バイタル</label><button class="section-reset-btn" onclick="resetVitals(this)">リセット</button></div>
             <div class="row">${['pre', 'post'].map(p => `<div class="vital-sub-block"><div style="font-size:0.7rem;font-weight:bold">${p === 'pre' ? 'リハ前' : 'リハ後'}</div><div class="vital-grid"><div><label>血圧</label><div style="display:flex;gap:2px"><input type="text" class="v-${p}-s" style="width:35px">/<input type="text" class="v-${p}-d" style="width:35px"></div></div><div><label>脈拍</label><input type="text" class="v-${p}-pr"></div><div><label>体温</label><input type="text" class="v-${p}-bt"></div><div><label>SpO2</label><input type="text" class="v-${p}-sp"></div></div></div>`).join('')}</div>
@@ -613,6 +620,7 @@
 
             const p = data.p;
             if (p.age) b.querySelector('.p-age').value = p.age;
+            if (p.sex) b.querySelector('.p-sex').value = p.sex;
             if (p.side) { b.querySelector('.p-side').value = p.side; highlight(b.querySelector('.p-side')); }
             if (p.dis) {
                 const diseaseEl = b.querySelector('.p-disease');
@@ -622,6 +630,7 @@
                 }
                 diseaseEl.value = p.dis;
             }
+            if (p.disSide) b.querySelector('.p-dis-side').value = p.disSide;
             if (p.hbS !== undefined) { b.querySelector('.p-hb').value = p.hbS; tgD(b.querySelector('.p-hb')); }
             if (p.hbD !== undefined) b.querySelector('.p-hb-d').value = p.hbD;
             if (p.dsS !== undefined) { b.querySelector('.p-ds').value = p.dsS; tgD(b.querySelector('.p-ds')); }
@@ -693,7 +702,9 @@
             document.querySelectorAll('.patient-block').forEach(b => {
                 const name = b.querySelector('.p-name').value; const h = b.querySelector('.p-h').value, m = b.querySelector('.p-m').value;
                 const curT = parseInt(h) * 60 + parseInt(m); const age = b.querySelector('.p-age').value;
+                const sex = b.querySelector('.p-sex').value;
                 const ins = b.querySelector('.p-ins').value.trim(); const side = b.querySelector('.p-side').value; const dis = b.querySelector('.p-disease').value;
+                const disSide = b.querySelector('.p-dis-side').value;
 
                 if (curT <= lastT) warnings.push(`${name}: 時間逆転`); lastT = curT;
                 if (["10代", "20代", "30代", "40代"].includes(age)) warnings.push(`${name}: 若年層配慮`);
@@ -734,7 +745,7 @@
                 }
 
                 localStorage.setItem(DB_PREFIX + 'full_mem_' + name, JSON.stringify({
-                    p: { age, side, dis, hbS, hbD, dsS, dsD, h, m, ins, rem },
+                    p: { age, sex, side, dis, disSide, hbS, hbD, dsS, dsD, h, m, ins, rem },
                     br: { ue: brUe, ha: brHa, le: brLe },
                     vitals: {
                         preS: b.querySelector('.v-pre-s').value, preD: b.querySelector('.v-pre-d').value,
@@ -753,7 +764,7 @@
                 localStorage.setItem(DB_PREFIX + 'hist_' + name, JSON.stringify(hist.slice(-30)));
 
                 // ノート出力
-                note += `【${h}:${m}】 ${name}（${age}・${side || '-'}） 疾患：${dis}\n`;
+                note += `【${h}:${m}】 ${name}（${age}${sex ? '・' + sex : ''}・${side || '-'}） 疾患：${dis}${disSide ? '（' + disSide + '）' : ''}\n`;
 
                 // バイタル（前後）
                 const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
@@ -773,7 +784,7 @@
                 if (dsS === 'あり') note += `補助具: ${dsD || '詳細未記入'}\n`;
 
                 // リハ内容（時間・Borg含む）
-                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => { let t = ''; if (r.min || r.sec) t = ` ${r.min || '0'}分${r.sec || '0'}秒`; return ` ・${r.n}${t} (${r.c}×${r.s}) NRS:${r.nrs || '-'} Borg:${r.bg || '-'}`; }).join('\n')}\n`;
+                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => { let parts = []; if (r.min || r.sec) parts.push(`${r.min || '0'}分${r.sec || '0'}秒`); if (r.c !== '0' && r.c !== '') parts.push(`${r.c}回`); if (r.s !== '0' && r.s !== '') parts.push(`${r.s}set`); if (r.nrs && r.nrs !== '') parts.push(`NRS:${r.nrs}`); if (r.bg && r.bg !== '') parts.push(`Borg:${r.bg}`); return ` ・${r.n}${parts.length ? ' ' + parts.join(' ') : ''}`; }).join('\n')}\n`;
 
                 // 評価項目（左右・単位）
                 if (sessionComps.length) note += `評価:\n${sessionComps.map(c => {
@@ -973,6 +984,53 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `PT_Practice_Backup.json`; a.click();
         }
 
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let count = 0;
+                    for (const key in data) {
+                        localStorage.setItem(key, data[key]);
+                        count++;
+                    }
+                    alert(`✅ ${count}件のデータを復元しました。ページを再読込します。`);
+                    location.reload();
+                } catch (err) {
+                    alert('❌ ファイルの読み込みに失敗しました。正しいバックアップファイルを選択してください。');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function showDataStatus() {
+            const bar = document.getElementById('data-status-bar');
+            let patientCount = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith(DB_PREFIX + 'full_mem_')) patientCount++;
+            }
+            if (patientCount > 0) {
+                bar.style.background = '#d1fae5';
+                bar.style.color = '#065f46';
+                bar.style.borderTop = '2px solid #10b981';
+                bar.innerHTML = `✅ ${patientCount}名分のデータが保存されています`;
+            } else {
+                bar.style.background = '#fef3c7';
+                bar.style.color = '#92400e';
+                bar.style.borderTop = '2px solid #f59e0b';
+                bar.innerHTML = '⚠️ 保存データがありません。バックアップがあれば <button onclick="importData()" style="background:#f59e0b;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:0.8rem;cursor:pointer;">📂 データを復元</button> してください';
+            }
+            bar.style.display = 'block';
+            setTimeout(() => { if (patientCount > 0) { bar.style.opacity = '0'; setTimeout(() => { bar.style.display = 'none'; bar.style.opacity = '1'; }, 500); } }, 4000);
+        }
+
         // === セクション別リセット関数 ===
         function resetVitals(btn) {
             const b = btn.closest('.patient-block');
@@ -1027,9 +1085,11 @@
                 b.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
                 // セレクトをデフォルトに
                 b.querySelector('.p-age').selectedIndex = 0;
+                b.querySelector('.p-sex').value = '';
                 b.querySelector('.p-side').value = '';
                 highlight(b.querySelector('.p-side'));
                 b.querySelector('.p-disease').selectedIndex = 0;
+                b.querySelector('.p-dis-side').value = '';
                 b.querySelector('.p-hb').value = 'なし'; tgD(b.querySelector('.p-hb'));
                 b.querySelector('.p-ds').value = 'なし'; tgD(b.querySelector('.p-ds'));
                 b.querySelectorAll('.br-ue, .br-ha, .br-le').forEach(s => s.value = '-');
@@ -1062,7 +1122,7 @@
             document.getElementById('output').innerText = '';
         }
 
-        window.onload = () => { loadConfig(); document.getElementById('dateInput').valueAsDate = new Date(); addPatientBlock(); };
+        window.onload = () => { loadConfig(); document.getElementById('dateInput').valueAsDate = new Date(); addPatientBlock(); showDataStatus(); };
 
         // メニュー外クリックで閉じる
         document.addEventListener('click', (e) => {
