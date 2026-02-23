@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#1e3a8a"/>
+  <rect x="50" y="25" width="92" height="120" rx="8" fill="white"/>
+  <rect x="72" y="15" width="48" height="20" rx="6" fill="#3498db"/>
+  <circle cx="96" cy="25" r="5" fill="white"/>
+  <rect x="62" y="55" width="68" height="5" rx="2" fill="#cbd5e1"/>
+  <rect x="62" y="70" width="55" height="5" rx="2" fill="#cbd5e1"/>
+  <rect x="62" y="85" width="60" height="5" rx="2" fill="#cbd5e1"/>
+  <rect x="62" y="100" width="45" height="5" rx="2" fill="#cbd5e1"/>
+  <rect x="62" y="115" width="50" height="5" rx="2" fill="#cbd5e1"/>
+  <text x="96" y="175" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="24" fill="white">PT</text>
+</svg>

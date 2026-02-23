@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PT実習ノート</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PT実習ノート">
+    <link rel="apple-touch-icon" href="./icon-192.svg">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3498db;
+            --warning: #ef4444;
+            --success: #1abc9c;
+            --bg: #f0f4f8;
+        }
+
+        body {
+            font-family: sans-serif;
+            line-height: 1.4;
+            padding: 10px;
+            background-color: var(--bg);
+            color: #333;
+            font-size: 13px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        /* 固定メニュー */
+        .menu-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+        }
+
+        .menu-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-content {
+            display: none;
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 230px;
+            overflow: hidden;
+        }
+
+        .menu-content button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+        }
+
+        .modal-body {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            width: 95%;
+            max-width: 850px;
+            max-height: 90%;
+            padding: 20px;
+            border-radius: 12px;
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        /* 患者カード */
+        .patient-block {
+            border: 2px solid #cbd5e1;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            background: #fff;
+            position: relative;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.7rem;
+            color: #475569;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        /* 検索とテーブル */
+        .search-input {
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 5px;
+            border: 1px solid var(--secondary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: #ebf5fb;
+        }
+
+        .compare-container {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .compare-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
+            gap: 5px;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #fef3c7;
+        }
+
+        .paralysis-highlight {
+            background-color: #fee2e2 !important;
+            border: 1px solid #f87171 !important;
+        }
+
+        .list-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .list-row {
+            display: grid;
+            gap: 5px;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .rehab-grid {
+            grid-template-columns: 2fr 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr;
+        }
+
+        .list-row.checked-row {
+            background-color: #e8f8f5;
+            border-left: 4px solid var(--success);
+        }
+
+        .list-row.hidden {
+            display: none;
+        }
+
+        .list-name {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .list-name input {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+        }
+
+        .vital-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        .del-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--warning);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+        }
+
+        #warning-box {
+            display: none;
+            background: #fff5f5;
+            border-left: 5px solid var(--warning);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        canvas {
+            max-width: 100%;
+            margin-top: 20px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .detail-input {
+            display: none;
+            margin-top: 5px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .section-header label {
+            margin-bottom: 0;
+        }
+
+        .section-reset-btn {
+            background: none;
+            border: 1px solid #cbd5e1;
+            color: #94a3b8;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 0.6rem;
+            cursor: pointer;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .section-reset-btn:hover {
+            background: #fee2e2;
+            border-color: #f87171;
+            color: #ef4444;
+        }
+
+        /* アセスメントシート */
+        .assess-modal .modal-body {
+            max-width: 950px;
+            width: 98%;
+            max-height: 95vh;
+            padding: 15px;
+        }
+
+        .assess-header {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .assess-header>div {
+            flex: 1;
+            min-width: 130px;
+        }
+
+        .assess-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .assess-tabs button {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--primary);
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .assess-tabs button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .assess-tabs button:not(.active) {
+            background: white;
+            color: var(--primary);
+        }
+
+        .assess-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .assess-section h3 {
+            font-size: 0.85rem;
+            color: var(--primary);
+            margin: 0 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        .assess-section textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .assess-section .assess-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .assess-section .assess-row>div {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .assess-section label {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #475569;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .problem-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .problem-row span {
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: var(--primary);
+            min-width: 22px;
+        }
+
+        .problem-row input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .assess-save-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .assess-save-bar button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        /* 症例患者トグル */
+        .case-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #64748b;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .case-toggle input {
+            display: none;
+        }
+
+        .case-toggle .case-label {
+            padding: 3px 8px;
+            border-radius: 12px;
+            border: 2px solid #94a3b8;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .case-toggle input:checked+.case-label {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        .soap-field {
+            display: none;
+            margin-top: 6px;
+        }
+
+        .soap-field.visible {
+            display: block;
+        }
+
+        .soap-field label {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #dc2626;
+        }
+
+        .soap-field textarea {
+            width: 100%;
+            padding: 6px;
+            border: 2px solid #fca5a5;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            resize: vertical;
+            background: #fff5f5;
+        }
+
+        .note-copy-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="menu-container">
+        <button class="menu-btn" onclick="toggleMenu()">≡</button>
+        <div class="menu-content" id="nav-menu">
+            <button onclick="showCriteria()">📏 中止基準を確認</button>
+            <button onclick="generateVerbalScript()">📢 報告用カンペ生成</button>
+            <button onclick="showInsHistory()">📝 学び・備考の履歴</button>
+            <button onclick="exportData()">💾 データを保存</button>
+            <button onclick="importData()">📂 データを復元</button>
+            <button onclick="showAssessmentSheet()">📋 アセスメントシート</button>
+            <button onclick="showProgressRecord()">📊 経過記録（SOAP）</button>
+            <button onclick="confirmReset()" style="color:var(--warning);">⚠️ 全リセット</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
+    </div>
+
+    <div id="chart-modal" class="modal">
+        <div class="modal-body">
+            <h2 id="chart-title">📈 推移グラフ</h2>
+            <div style="margin-bottom:10px;display:flex;gap:6px;">
+                <button onclick="switchChartTab('vital')" id="tab-vital"
+                    style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:var(--primary);color:white;font-weight:bold;cursor:pointer;">🩺
+                    バイタル</button>
+                <button onclick="switchChartTab('score')" id="tab-score"
+                    style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:white;color:var(--primary);font-weight:bold;cursor:pointer;">📊
+                    検査結果</button>
+            </div>
+            <div id="vital-chart-area"><canvas id="vitalChart"></canvas></div>
+            <div id="score-chart-area" style="display:none;"><canvas id="scoreChart"></canvas></div>
+            <button class="close-btn" onclick="closeModal('chart-modal')">閉じる</button>
+        </div>
+    </div>
+    <div id="criteria-modal" class="modal">
+        <div class="modal-body">
+            <h2>📏 リハ中止基準</h2>
+            <p>安静時：PR 120↑, BP 200/120↑。<br>運動中：BP 40↑上昇, PR 140↑, Borg 17↑等で中止。</p><button class="close-btn"
+                onclick="closeModal('criteria-modal')">閉じる</button>
+        </div>
+    </div>
+    <div id="script-modal" class="modal">
+        <div class="modal-body">
+            <h2>📢 報告カンペ</h2>
+            <div id="script-cont" style="white-space:pre-wrap;"></div><button class="close-btn"
+                onclick="closeModal('script-modal')">閉じる</button>
+        </div>
+    </div>
+    <div id="ins-history-modal" class="modal">
+        <div class="modal-body">
+            <h2>📝 学び・備考の履歴</h2>
+            <div style="margin-bottom:10px;">
+                <label>患者を選択</label>
+                <select id="ins-history-patient" onchange="loadInsHistory()"
+                    style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;"></select>
+            </div>
+            <div id="ins-history-content" style="max-height:60vh;overflow-y:auto;"></div>
+            <button class="close-btn" onclick="closeModal('ins-history-modal')">閉じる</button>
+        </div>
+    </div>
+
+    <!-- アセスメントシートモーダル -->
+    <div id="assess-modal" class="modal assess-modal">
+        <div class="modal-body">
+            <h2 style="margin:0 0 10px 0;color:var(--primary);">📋 アセスメントシート</h2>
+            <div class="assess-header">
+                <div>
+                    <label>患者</label>
+                    <select id="assess-patient" onchange="loadAssessment()"
+                        style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;"></select>
+                </div>
+                <div>
+                    <label>記入日</label>
+                    <input type="date" id="assess-date" onchange="loadAssessmentByDate()"
+                        style="width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;">
+                </div>
+                <div style="flex:0;min-width:auto;">
+                    <label>&nbsp;</label>
+                    <button onclick="loadAssessmentDates()"
+                        style="padding:7px 12px;background:var(--secondary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📅
+                        履歴</button>
+                </div>
+            </div>
+
+            <div class="assess-tabs">
+                <button id="assess-tab1" class="active" onclick="switchAssessTab('sheet1')">📝 アセスメントⅠ</button>
+                <button id="assess-tab2" onclick="switchAssessTab('sheet2')">🔀 アセスメントⅡ（ICF）</button>
+            </div>
+
+            <!-- アセスメントⅠ -->
+            <div id="assess-sheet1">
+                <div class="assess-section">
+                    <h3>📋 基礎情報・医学的情報</h3>
+                    <div class="assess-row">
+                        <div style="min-width:80px;flex:0;"><label>年齢</label><input type="text" id="as1-age"
+                                placeholder="例: 80代"
+                                style="padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;"></div>
+                        <div style="min-width:80px;flex:0;"><label>性別</label><select id="as1-sex"
+                                style="padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;">
+                                <option value="">-</option>
+                                <option value="男性">男性</option>
+                                <option value="女性">女性</option>
+                            </select></div>
+                        <div><label>診断名</label><input type="text" id="as1-diagnosis"
+                                style="padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;"></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>合併症</label><textarea id="as1-comorbidity" rows="2"></textarea></div>
+                        <div><label>既往歴</label><textarea id="as1-pastHistory" rows="2"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>現病歴</label><textarea id="as1-currentHistory" rows="3"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>服薬状況</label><textarea id="as1-medication" rows="2"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>安静度・その他の特記事項</label><textarea id="as1-restrictions" rows="2"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="assess-section">
+                    <h3>👥 社会的背景・生活情報</h3>
+                    <div class="assess-row">
+                        <div><label>家族構成</label><textarea id="as1-family" rows="2"></textarea></div>
+                        <div><label>住環境</label><textarea id="as1-livingEnv" rows="2"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>入院前の生活（飲酒・タバコ・介護度・移動能力・家事など）</label><textarea id="as1-preLife" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>病棟（現在）の生活</label><textarea id="as1-wardLife" rows="3"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🏃 基本動作・病棟ADL</h3>
+                    <div class="assess-row">
+                        <div><label>【基本動作】（寝返り・起き上がり・端座位・起立・移乗・歩行）</label><textarea id="as1-basicMovement" rows="3"
+                                placeholder="寝返り: 
+起き上がり: 
+端座位: 
+起立: 
+移乗: 
+歩行: "></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>【病棟ADL】（食事・整容・更衣・排泄・入浴）</label><textarea id="as1-adl" rows="3" placeholder="食事: 
+整容: 
+更衣: 
+排泄: 
+入浴: "></textarea></div>
+                    </div>
+                </div>
+
+                <div class="assess-section">
+                    <h3>� 主訴</h3>
+                    <textarea id="as1-chiefComplaint" rows="2"></textarea>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🏁 介入方針・計画・目標</h3>
+                    <div class="assess-row">
+                        <div><label>他職種の介入方針・目標</label><textarea id="as1-otherProfPlan" rows="3"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>方法など</label><textarea id="as1-methods" rows="2"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>疾患や障害の予後予測</label><textarea id="as1-prognosis" rows="3"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>短期目標</label><textarea id="as1-stg" rows="3"></textarea></div>
+                        <div><label>長期目標</label><textarea id="as1-ltg" rows="3"></textarea></div>
+                    </div>
+                    <div class="assess-row">
+                        <div><label>治療プログラム</label><textarea id="as1-treatment" rows="4"></textarea></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アセスメントⅡ（ICF） -->
+            <div id="assess-sheet2" style="display:none;">
+                <div class="assess-section">
+                    <h3>🩺 健康状態</h3>
+                    <textarea id="as2-healthCondition" rows="3" placeholder="診断名、発症日、経過等"></textarea>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🧠 心身機能・身体構造</h3>
+                    <textarea id="as2-bodyFunction" rows="4" placeholder="筋力低下、ROM制限、疼痛、感覚障害、高次脳機能障害等"></textarea>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🏃 活動</h3>
+                    <div class="assess-row">
+                        <div><label>できる活動（能力）</label><textarea id="as2-activityCan" rows="3"
+                                placeholder="検査・評価場面で確認された能力"></textarea></div>
+                        <div><label>している活動（実行状況）</label><textarea id="as2-activityDo" rows="3"
+                                placeholder="病棟・日常生活での実際の状況"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🤝 参加</h3>
+                    <textarea id="as2-participation" rows="3" placeholder="家庭内役割、社会参加、就労・就学等"></textarea>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🌍 環境因子</h3>
+                    <div class="assess-row">
+                        <div><label>促進因子（＋）</label><textarea id="as2-envPositive" rows="3"
+                                placeholder="家族のサポート、福祉用具、バリアフリー等"></textarea></div>
+                        <div><label>阻害因子（－）</label><textarea id="as2-envNegative" rows="3"
+                                placeholder="段差、独居、経済的問題等"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="assess-section">
+                    <h3>👤 個人因子</h3>
+                    <textarea id="as2-personalFactor" rows="3" placeholder="性格、価値観、生活歴、ライフスタイル等"></textarea>
+                </div>
+
+                <div class="assess-section">
+                    <h3>🔗 統合と解釈</h3>
+                    <textarea id="as2-integration" rows="5" placeholder="ICF各項目の関連性と全体的な解釈"></textarea>
+                </div>
+            </div>
+
+            <div class="assess-save-bar">
+                <button onclick="saveAssessment()" style="background:var(--primary);color:white;">💾 保存</button>
+                <button onclick="generateAssessmentNote()" style="background:var(--success);color:white;">📝
+                    ノート出力</button>
+                <button onclick="closeModal('assess-modal')" style="background:#64748b;color:white;">閉じる</button>
+            </div>
+            <div id="assess-output"
+                style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:12px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 経過記録（SOAP）モーダル -->
+    <div id="soap-modal" class="modal assess-modal">
+        <div class="modal-body">
+            <h2 style="margin:0 0 10px 0;color:var(--primary);">📊 経過記録（SOAP）</h2>
+            <div class="assess-header">
+                <div>
+                    <label>患者</label>
+                    <select id="soap-patient" onchange="onSOAPPatientChange()"
+                        style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;"></select>
+                </div>
+                <div style="flex:0;min-width:auto;display:flex;gap:6px;align-items:flex-end;">
+                    <button id="soap-new-btn" onclick="showSOAPInput()"
+                        style="padding:8px 14px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:bold;white-space:nowrap;">✏️
+                        新規入力</button>
+                    <button onclick="closeModal('soap-modal')"
+                        style="padding:8px 14px;background:#64748b;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:bold;">閉じる</button>
+                </div>
+            </div>
+
+            <!-- 一覧表示モード -->
+            <div id="soap-list-view">
+                <div id="soap-history-list" style="margin-top:10px;">
+                    <p style="color:#94a3b8;text-align:center;padding:30px 0;">患者を選択すると記録一覧が表示されます</p>
+                </div>
+                <button id="soap-export-all-btn" onclick="exportAllSOAP()"
+                    style="display:none;margin-top:8px;padding:10px;width:100%;background:var(--success);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.9rem;">📄
+                    全記録を出力＆コピー</button>
+                <div id="soap-all-output"
+                    style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:8px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
+                </div>
+            </div>
+
+            <!-- 入力モード -->
+            <div id="soap-input-view" style="display:none;">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+                    <button onclick="showSOAPList()"
+                        style="padding:6px 12px;background:#94a3b8;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">←
+                        一覧に戻る</button>
+                    <label style="font-weight:bold;">記入日</label>
+                    <input type="date" id="soap-date"
+                        style="padding:6px;border:1px solid #cbd5e1;border-radius:4px;font-size:13px;">
+                </div>
+                <div class="assess-section" style="border-left:4px solid #3b82f6;">
+                    <h3>🗣️ S（主観的情報）</h3>
+                    <textarea id="soap-s" rows="4" placeholder="患者の訴え、希望、感想など"></textarea>
+                </div>
+                <div class="assess-section" style="border-left:4px solid #10b981;">
+                    <h3>📝 O（客観的情報）</h3>
+                    <textarea id="soap-o" rows="5" placeholder="バイタル、検査結果、観察所見など"></textarea>
+                </div>
+                <div class="assess-section" style="border-left:4px solid #f59e0b;">
+                    <h3>🧠 A（アセスメント）</h3>
+                    <textarea id="soap-a" rows="5" placeholder="問題点の分析、考察、解釈など"></textarea>
+                </div>
+                <div class="assess-section" style="border-left:4px solid #8b5cf6;">
+                    <h3>🏁 P（計画）</h3>
+                    <textarea id="soap-p" rows="4" placeholder="今後の治療計画、目標など"></textarea>
+                </div>
+                <div class="assess-save-bar">
+                    <button onclick="saveSOAP()" style="background:var(--primary);color:white;">💾 保存</button>
+                    <button onclick="generateSOAPNote()" style="background:var(--success);color:white;">📝
+                        ノート出力</button>
+                    <button onclick="showSOAPList()" style="background:#64748b;color:white;">一覧に戻る</button>
+                </div>
+                <div id="soap-output"
+                    style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:12px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-status-bar"
+        style="display:none; position:fixed; bottom:0; left:0; right:0; padding:10px 15px; font-size:0.8rem; z-index:999; text-align:center; transition:opacity 0.5s;">
+    </div>
+
+    <div class="container">
+        <h1>PT実習ノート：究極コンプリート版</h1>
+        <div id="warning-box"></div>
+        <div style="margin-bottom: 15px;"><label>実習日</label><input type="date" id="dateInput"></div>
+
+        <div id="patientList"></div>
+
+        <button onclick="addPatientBlock()"
+            style="background:#64748b; color:white; border:none; padding:12px; width:100%; border-radius:8px; cursor:pointer; margin-bottom:20px; font-weight:bold;">＋
+            患者を追加</button>
+        <button onclick="generateNote()"
+            style="background:var(--primary); color:white; border:none; padding:15px; width:100%; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold;">ノート生成
+            ＆ 全項目を記憶</button>
+        <button onclick="clearAllInputs()"
+            style="background:#f59e0b; color:white; border:none; padding:12px; width:100%; border-radius:8px; cursor:pointer; font-size:0.95rem; font-weight:bold; margin-top:8px;">🗑️
+            すべての入力をクリア</button>
+
+        <div id="output"
+            style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:20px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem;">
+        </div>
+        <button id="copy-note-btn" class="note-copy-btn" style="display:none;" onclick="copyNoteBody()">📋
+            ノートをコピー（ヘッダー除外）</button>
+
+        <div style="margin-top: 30px; padding: 15px; background: #e2e8f0; border-radius: 8px;">
+            <label>⚙️ マスター設定（自動保存）</label>
+            <div class="row">
+                <div class="col"><label>疾患リスト</label><textarea id="masterDiseases" rows="4"
+                        oninput="saveConfig()">大腿骨転子部骨折&#13;脳梗塞&#13;肺炎後廃用症候群&#13;脊柱管狭窄症</textarea></div>
+                <div class="col"><label>リハメニュー</label><textarea id="masterRehabs" rows="4"
+                        oninput="saveConfig()">下肢リラクゼーション&#13;お尻上げ&#13;歩行訓練&#13;起立訓練&#13;端坐位保持</textarea></div>
+                <div class="col"><label>評価項目 (名称:単位)</label><textarea id="masterCompare" rows="4"
+                        oninput="saveConfig()">MMT(腸腰筋):段階&#13;ROM(股屈曲):°&#13;BBS:点&#13;TUG:秒</textarea></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_PREFIX = 'pt_final_v34_';
+        const alphabet = (() => { const a = []; const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""); L.forEach(c => a.push(c)); L.forEach(c => a.push("A" + c)); L.forEach(c => a.push("B" + c)); return a; })();
+        let vitalChartInstance = null; let scoreChartInstance = null;
+
+        function toggleMenu() { const m = document.getElementById('nav-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function showCriteria() { document.getElementById('criteria-modal').style.display = 'block'; }
+        function confirmReset() { if (confirm("全消去しますか？")) { localStorage.clear(); location.reload(); } }
+
+        function saveConfig() {
+            localStorage.setItem(DB_PREFIX + 'config', JSON.stringify({ diseases: document.getElementById('masterDiseases').value, rehabs: document.getElementById('masterRehabs').value, compare: document.getElementById('masterCompare').value }));
+            syncMasterToBlocks();
+        }
+        function loadConfig() { const c = JSON.parse(localStorage.getItem(DB_PREFIX + 'config')); if (c) { document.getElementById('masterDiseases').value = c.diseases; document.getElementById('masterRehabs').value = c.rehabs; document.getElementById('masterCompare').value = c.compare; } }
+
+        function syncMasterToBlocks() {
+            const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
+            const rehabs = document.getElementById('masterRehabs').value.split('\n').filter(v => v);
+            const compares = document.getElementById('masterCompare').value.split('\n').filter(v => v);
+
+            document.querySelectorAll('.patient-block').forEach(b => {
+                // === 疾患リストの同期 ===
+                const disEl = b.querySelector('.p-disease');
+                const curDis = disEl.value;
+                const curDisSide = b.querySelector('.p-dis-side').value;
+                disEl.innerHTML = '<option value="">選択</option>' + diseases.map(d => `<option value="${d}">${d}</option>`).join('');
+                // 以前の選択値があれば復元（マスターに無くても追加）
+                if (curDis) {
+                    if (![...disEl.options].some(o => o.value === curDis)) {
+                        const opt = document.createElement('option'); opt.value = curDis; opt.textContent = curDis; disEl.appendChild(opt);
+                    }
+                    disEl.value = curDis;
+                }
+                b.querySelector('.p-dis-side').value = curDisSide;
+
+                // === リハメニューの同期 ===
+                const rehabBody = b.querySelector('.rehab-list-body');
+                // 現在の入力状態を保存
+                const rehabState = {};
+                rehabBody.querySelectorAll('.list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk');
+                    rehabState[chk.value] = {
+                        checked: chk.checked,
+                        min: row.querySelector('.r-min').value,
+                        sec: row.querySelector('.r-sec').value,
+                        c: row.querySelector('.r-c').value,
+                        s: row.querySelector('.r-s').value,
+                        m: row.querySelector('.r-m') ? row.querySelector('.r-m').value : '',
+                        nrs: row.querySelector('.r-nrs').value,
+                        bg: row.querySelector('.r-bg').value
+                    };
+                });
+                // 再構築
+                rehabBody.innerHTML = rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-min" style="width:28px;padding:4px;font-size:12px;" placeholder="分">:<input type="text" class="r-sec" style="width:28px;padding:4px;font-size:12px;" placeholder="秒"></div><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-m" style="width:36px;padding:4px;font-size:12px;" placeholder="m"><span style="font-size:11px;">m</span></div><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('');
+                // 保存した入力状態を復元
+                rehabBody.querySelectorAll('.list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk');
+                    const st = rehabState[chk.value];
+                    if (st) {
+                        chk.checked = st.checked;
+                        if (st.checked) row.classList.add('checked-row');
+                        row.querySelector('.r-min').value = st.min;
+                        row.querySelector('.r-sec').value = st.sec;
+                        row.querySelector('.r-c').value = st.c;
+                        row.querySelector('.r-s').value = st.s;
+                        if (row.querySelector('.r-m')) row.querySelector('.r-m').value = st.m || '';
+                        row.querySelector('.r-nrs').value = st.nrs;
+                        row.querySelector('.r-bg').value = st.bg;
+                    }
+                });
+                // チェック済みを上に並べ替え
+                const rRows = Array.from(rehabBody.children);
+                rRows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1);
+                rRows.forEach(r => rehabBody.appendChild(r));
+
+                // === 評価項目の同期 ===
+                const compBody = b.querySelector('.compare-body');
+                // 現在の入力状態を保存
+                const compState = {};
+                compBody.querySelectorAll('.compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (!chk) return;
+                    compState[chk.value] = {
+                        checked: chk.checked,
+                        side: row.querySelector('.c-side') ? row.querySelector('.c-side').value : 'lr',
+                        r: row.querySelector('.c-r') ? row.querySelector('.c-r').value : '',
+                        l: row.querySelector('.c-l') ? row.querySelector('.c-l').value : '',
+                        val: row.querySelector('.c-val') ? row.querySelector('.c-val').value : ''
+                    };
+                });
+                // 再構築
+                const sideVal = b.querySelector('.p-side').value;
+                compBody.innerHTML = `<div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>` +
+                    compares.map(item => {
+                        const [n, u] = item.split(':');
+                        return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
+                    }).join('');
+                // 保存した入力状態を復元
+                compBody.querySelectorAll('.compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (!chk) return;
+                    const st = compState[chk.value];
+                    if (st) {
+                        chk.checked = st.checked;
+                        const sideEl = row.querySelector('.c-side');
+                        if (sideEl) { sideEl.value = st.side; toggleCompSide(sideEl); }
+                        if (st.side === 'none') {
+                            if (row.querySelector('.c-val')) row.querySelector('.c-val').value = st.val || st.l || '';
+                        } else {
+                            if (row.querySelector('.c-r')) row.querySelector('.c-r').value = st.r;
+                            if (row.querySelector('.c-l')) row.querySelector('.c-l').value = st.l;
+                        }
+                    }
+                });
+                // 麻痺側ハイライト再適用
+                highlight(b.querySelector('.p-side'));
+            });
+        }
+
+        function filterList(input, cls) { const q = input.value.toLowerCase(); input.closest('.patient-block').querySelectorAll(`.${cls} .list-row`).forEach(r => r.classList.toggle('hidden', !r.textContent.toLowerCase().includes(q))); }
+
+        function addPatientBlock() {
+            const list = document.getElementById('patientList');
+            const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
+            const rehabs = document.getElementById('masterRehabs').value.split('\n').filter(v => v);
+            const compares = document.getElementById('masterCompare').value.split('\n').filter(v => v);
+            const block = document.createElement('div');
+            block.className = 'patient-block';
+
+            block.innerHTML = `
+            <button class="del-btn" onclick="this.parentElement.remove()">削除</button>
+            <div class="row">
+                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
+                <div class="col"><label>氏名</label><div style="display:flex;gap:4px;align-items:center;"><select class="p-name" onchange="sync(this)">${alphabet.map(n => `<option value="${n}さん">${n}さん</option>`).join('')}</select><button class="menu-btn" style="width:30px;height:30px;font-size:0.8rem" onclick="openChartModal(this.previousElementSibling.value)">📈</button><label class="case-toggle"><input type="checkbox" class="case-chk" onchange="toggleCasePatient(this)"><span class="case-label">症例</span></label></div></div>
+                <div style="width:75px;"><label>年齢</label><select class="p-age">${Array.from({ length: 9 }, (_, i) => `<option value="${(i + 1) * 10}代">${(i + 1) * 10}代</option>`).join('')}</select></div>
+                <div style="width:65px;"><label>性別</label><select class="p-sex"><option value="">-</option><option value="男性">男性</option><option value="女性">女性</option></select></div>
+                <div style="width:70px;"><label>麻痺側</label><select class="p-side" onchange="highlight(this)"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div>
+                <div class="col"><label>疾患</label><div style="display:flex;gap:4px"><select class="p-disease"><option value="">選択</option>${diseases.map(d => `<option value="${d}">${d}</option>`).join('')}</select><select class="p-dis-side" style="width:55px;"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div></div>
+            </div>
+            <div class="section-header"><label>🩺 バイタル</label><button class="section-reset-btn" onclick="resetVitals(this)">リセット</button></div>
+            <div class="row">${['pre', 'post'].map(p => `<div class="vital-sub-block"><div style="font-size:0.7rem;font-weight:bold">${p === 'pre' ? 'リハ前' : 'リハ後'}</div><div class="vital-grid"><div><label>血圧</label><div style="display:flex;gap:2px"><input type="text" class="v-${p}-s" style="width:35px">/<input type="text" class="v-${p}-d" style="width:35px"></div></div><div><label>脈拍</label><input type="text" class="v-${p}-pr"></div><div><label>体温</label><input type="text" class="v-${p}-bt"></div><div><label>SpO2</label><input type="text" class="v-${p}-sp"></div></div></div>`).join('')}</div>
+            
+            <div class="section-header"><label>📋 リハ内容検索</label><button class="section-reset-btn" onclick="resetRehabs(this)">リセット</button></div>
+            <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'rehab-list-body')">
+            <div class="list-container"><div class="rehab-list-body">${rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-min" style="width:28px;padding:4px;font-size:12px;" placeholder="分">:<input type="text" class="r-sec" style="width:28px;padding:4px;font-size:12px;" placeholder="秒"></div><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-m" style="width:36px;padding:4px;font-size:12px;" placeholder="m"><span style="font-size:11px;">m</span></div><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('')}</div></div>
+            
+            <div class="section-header"><label>🧠 Br.stage</label><button class="section-reset-btn" onclick="resetBrstage(this)">リセット</button></div>
+            <div class="row" style="background:#f1f5f9; padding:5px; border-radius:5px;"><div class="col" style="display:flex; gap:10px;"><label>上肢<select class="br-ue">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label><label>手指<select class="br-ha">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label><label>下肢<select class="br-le">${["-", "I", "II", "III", "IV", "V", "VI"].map(s => `<option value="${s}">${s}</option>`).join('')}</select></label></div></div>
+
+            <div class="section-header"><label>⚖️ 左右評価・検査検索</label><button class="section-reset-btn" onclick="resetComps(this)">リセット</button></div>
+            <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'compare-body')">
+            <div class="compare-container"><div class="compare-body">
+                <div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>
+                ${compares.map(item => {
+                const [n, u] = item.split(':');
+                return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
+            }).join('')}
+            </div></div>
+
+            <div class="soap-field soap-s-field"><label>🗣️ S（主観的情報）</label><textarea class="p-soap-s" rows="3" placeholder="患者の訴え、希望、感想など"></textarea></div>
+            <div class="row"><div class="col"><div class="section-header"><label>💡 学び・アセスメント（⚠️重要）</label><button class="section-reset-btn" onclick="resetTextarea(this, '.p-ins')">リセット</button></div><textarea class="p-ins" rows="4"></textarea></div></div>
+            <div class="row"><div class="col"><div class="section-header"><label>💬 備考（大型）</label><button class="section-reset-btn" onclick="resetTextarea(this, '.p-rem')">リセット</button></div><textarea class="p-rem" rows="4"></textarea></div></div>
+            <div class="soap-field soap-p-field"><label>🏁 P（計画）</label><textarea class="p-soap-p" rows="3" placeholder="今後の治療計画、目標など"></textarea></div>
+            <div class="row">
+                <div class="col"><div class="section-header"><label>🧠 高次脳</label><button class="section-reset-btn" onclick="resetHbDs(this, '.p-hb', '.p-hb-d')">リセット</button></div><select class="p-hb" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-hb-d detail-input"></div>
+                <div class="col"><div class="section-header"><label>🩼 補助具</label><button class="section-reset-btn" onclick="resetHbDs(this, '.p-ds', '.p-ds-d')">リセット</button></div><select class="p-ds" onchange="tgD(this)"><option value="なし">なし</option><option value="あり">あり</option></select><input type="text" class="p-ds-d detail-input"></div>
+            </div>
+        `;
+            list.appendChild(block);
+        }
+
+        function sortR(el) { const b = el.closest('.rehab-list-body'); const rows = Array.from(b.children); rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1); rows.forEach(r => { r.classList.toggle('checked-row', r.querySelector('input').checked); b.appendChild(r); }); }
+        function tgD(el) { el.nextElementSibling.style.display = (el.value === "あり") ? "block" : "none"; }
+        function highlight(el) { const b = el.closest('.patient-block'); b.querySelectorAll('.in-l').forEach(i => i.classList.toggle('paralysis-highlight', el.value === '左')); b.querySelectorAll('.in-r').forEach(i => i.classList.toggle('paralysis-highlight', el.value === '右')); }
+
+        function toggleCompSide(sel) {
+            const row = sel.closest('.compare-row');
+            const cL = row.querySelector('.c-l');
+            const cR = row.querySelector('.c-r');
+            const cV = row.querySelector('.c-val');
+            const v = sel.value;
+            if (v === 'lr') { cR.style.display = ''; cL.style.display = ''; cV.style.display = 'none'; }
+            else if (v === 'l') { cR.style.display = 'none'; cR.value = ''; cL.style.display = ''; cV.style.display = 'none'; }
+            else if (v === 'r') { cR.style.display = ''; cL.style.display = 'none'; cL.value = ''; cV.style.display = 'none'; }
+            else { cR.style.display = 'none'; cR.value = ''; cL.style.display = 'none'; cL.value = ''; cV.style.display = ''; }
+        }
+
+        function sync(el) {
+            const name = el.value; const b = el.closest('.patient-block');
+            let raw;
+            try { raw = localStorage.getItem(DB_PREFIX + 'full_mem_' + name); } catch (e) { return; }
+            if (!raw) return;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+            if (!data || !data.p) return;
+
+            const p = data.p;
+            if (p.age) b.querySelector('.p-age').value = p.age;
+            if (p.sex) b.querySelector('.p-sex').value = p.sex;
+            if (p.side) { b.querySelector('.p-side').value = p.side; highlight(b.querySelector('.p-side')); }
+            if (p.dis) {
+                const diseaseEl = b.querySelector('.p-disease');
+                // 選択肢にない場合はoptionを追加
+                if (![...diseaseEl.options].some(o => o.value === p.dis)) {
+                    const opt = document.createElement('option'); opt.value = p.dis; opt.textContent = p.dis; diseaseEl.appendChild(opt);
+                }
+                diseaseEl.value = p.dis;
+            }
+            if (p.disSide) b.querySelector('.p-dis-side').value = p.disSide;
+            if (p.hbS !== undefined) { b.querySelector('.p-hb').value = p.hbS; tgD(b.querySelector('.p-hb')); }
+            if (p.hbD !== undefined) b.querySelector('.p-hb-d').value = p.hbD;
+            if (p.dsS !== undefined) { b.querySelector('.p-ds').value = p.dsS; tgD(b.querySelector('.p-ds')); }
+            if (p.dsD !== undefined) b.querySelector('.p-ds-d').value = p.dsD;
+            // 時間の復元
+            if (p.h) b.querySelector('.p-h').value = p.h;
+            if (p.m !== undefined) b.querySelector('.p-m').value = p.m;
+            // 学び・備考を復元
+            if (p.ins !== undefined) b.querySelector('.p-ins').value = p.ins;
+            if (p.rem !== undefined) b.querySelector('.p-rem').value = p.rem;
+
+            // Br.stage
+            if (data.br) {
+                if (data.br.ue !== undefined) b.querySelector('.br-ue').value = data.br.ue;
+                if (data.br.ha !== undefined) b.querySelector('.br-ha').value = data.br.ha;
+                if (data.br.le !== undefined) b.querySelector('.br-le').value = data.br.le;
+            }
+
+            // バイタル（前後）の復元
+            if (data.vitals) {
+                const v = data.vitals;
+                if (v.preS) b.querySelector('.v-pre-s').value = v.preS;
+                if (v.preD) b.querySelector('.v-pre-d').value = v.preD;
+                if (v.prePr) b.querySelector('.v-pre-pr').value = v.prePr;
+                if (v.preBt) b.querySelector('.v-pre-bt').value = v.preBt;
+                if (v.preSp) b.querySelector('.v-pre-sp').value = v.preSp;
+                if (v.postS) b.querySelector('.v-post-s').value = v.postS;
+                if (v.postD) b.querySelector('.v-post-d').value = v.postD;
+                if (v.postPr) b.querySelector('.v-post-pr').value = v.postPr;
+                if (v.postBt) b.querySelector('.v-post-bt').value = v.postBt;
+                if (v.postSp) b.querySelector('.v-post-sp').value = v.postSp;
+            }
+
+            // リハビリ内容の復元
+            if (data.rehabs) {
+                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                    const chk = row.querySelector('.r-chk'); const s = data.rehabs.find(r => r.n === chk.value);
+                    if (s) { chk.checked = true; row.classList.add('checked-row'); if (s.min !== undefined && s.min !== '') row.querySelector('.r-min').value = s.min; if (s.sec !== undefined && s.sec !== '') row.querySelector('.r-sec').value = s.sec; row.querySelector('.r-c').value = s.c; row.querySelector('.r-s').value = s.s; if (row.querySelector('.r-m') && s.m !== undefined) row.querySelector('.r-m').value = s.m; row.querySelector('.r-nrs').value = s.nrs; row.querySelector('.r-bg').value = s.bg; } else { chk.checked = false; row.classList.remove('checked-row'); }
+                });
+                // チェック済みアイテムを上に並べ替え
+                const body = b.querySelector('.rehab-list-body');
+                const rows = Array.from(body.children);
+                rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1);
+                rows.forEach(r => body.appendChild(r));
+            }
+
+            // 評価項目の復元
+            if (data.comps) {
+                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk'); if (!chk) return; const s = data.comps.find(c => c.n === chk.value);
+                    if (s) {
+                        chk.checked = true;
+                        if (s.sd) { const sideEl = row.querySelector('.c-side'); sideEl.value = s.sd; toggleCompSide(sideEl); }
+                        if (s.sd === 'none') {
+                            row.querySelector('.c-val').value = s.l || '';
+                        } else {
+                            if (row.querySelector('.c-l')) row.querySelector('.c-l').value = s.l || '';
+                            if (row.querySelector('.c-r')) row.querySelector('.c-r').value = s.r || '';
+                        }
+                    } else { chk.checked = false; }
+                });
+            }
+        }
+
+        function generateNote() {
+            const date = document.getElementById('dateInput').value; let note = `理学療法実習 デイリーノート (${date})\n\n`;
+            let warnings = []; let lastT = -1;
+
+            document.querySelectorAll('.patient-block').forEach(b => {
+                const name = b.querySelector('.p-name').value; const h = b.querySelector('.p-h').value, m = b.querySelector('.p-m').value;
+                const curT = parseInt(h) * 60 + parseInt(m); const age = b.querySelector('.p-age').value;
+                const sex = b.querySelector('.p-sex').value;
+                const ins = b.querySelector('.p-ins').value.trim(); const side = b.querySelector('.p-side').value; const dis = b.querySelector('.p-disease').value;
+                const disSide = b.querySelector('.p-dis-side').value;
+
+                if (curT <= lastT) warnings.push(`${name}: 時間逆転`); lastT = curT;
+                if (["10代", "20代", "30代", "40代"].includes(age)) warnings.push(`${name}: 若年層配慮`);
+                if (!ins) warnings.push(`${name}: 学び空欄`);
+
+                // バイタル異常値チェック
+                const preS = parseInt(b.querySelector('.v-pre-s').value);
+                const prePr = parseInt(b.querySelector('.v-pre-pr').value);
+                if (preS > 200) warnings.push(`${name}: 安静時血圧(上) ${preS} → 200超`);
+                const preD = parseInt(b.querySelector('.v-pre-d').value);
+                if (preD > 120) warnings.push(`${name}: 安静時血圧(下) ${preD} → 120超`);
+                if (prePr > 120) warnings.push(`${name}: 安静時脈拍 ${prePr} → 120超`);
+
+                let sessionRehabs = []; b.querySelectorAll('.r-chk:checked').forEach(c => {
+                    const row = c.closest('.list-row'); sessionRehabs.push({ n: c.value, min: row.querySelector('.r-min').value, sec: row.querySelector('.r-sec').value, c: row.querySelector('.r-c').value, s: row.querySelector('.r-s').value, m: row.querySelector('.r-m') ? row.querySelector('.r-m').value : '', nrs: row.querySelector('.r-nrs').value, bg: row.querySelector('.r-bg').value });
+                });
+                let sessionComps = []; b.querySelectorAll('.c-chk:checked').forEach(c => {
+                    const row = c.closest('.compare-row');
+                    const unit = c.dataset.unit || '';
+                    const sd = row.querySelector('.c-side').value;
+                    if (sd === 'none') {
+                        sessionComps.push({ n: c.value, sd, l: row.querySelector('.c-val').value, r: '', u: unit });
+                    } else {
+                        sessionComps.push({ n: c.value, sd, l: row.querySelector('.c-l').value, r: row.querySelector('.c-r').value, u: unit });
+                    }
+                });
+
+                // Br.stage
+                const brUe = b.querySelector('.br-ue').value, brHa = b.querySelector('.br-ha').value, brLe = b.querySelector('.br-le').value;
+                // 高次脳・補助具
+                const hbS = b.querySelector('.p-hb').value, hbD = b.querySelector('.p-hb-d').value;
+                const dsS = b.querySelector('.p-ds').value, dsD = b.querySelector('.p-ds-d').value;
+
+                // 学び・備考を日付付き履歴として保存
+                const rem = b.querySelector('.p-rem').value.trim();
+                if (ins || rem) {
+                    let insHist = JSON.parse(localStorage.getItem(DB_PREFIX + 'ins_hist_' + name)) || [];
+                    insHist.push({ date, ins: ins, rem: rem });
+                    localStorage.setItem(DB_PREFIX + 'ins_hist_' + name, JSON.stringify(insHist.slice(-50)));
+                }
+
+                localStorage.setItem(DB_PREFIX + 'full_mem_' + name, JSON.stringify({
+                    p: { age, sex, side, dis, disSide, hbS, hbD, dsS, dsD, h, m, ins, rem },
+                    br: { ue: brUe, ha: brHa, le: brLe },
+                    vitals: {
+                        preS: b.querySelector('.v-pre-s').value, preD: b.querySelector('.v-pre-d').value,
+                        prePr: b.querySelector('.v-pre-pr').value, preBt: b.querySelector('.v-pre-bt').value, preSp: b.querySelector('.v-pre-sp').value,
+                        postS: b.querySelector('.v-post-s').value, postD: b.querySelector('.v-post-d').value,
+                        postPr: b.querySelector('.v-post-pr').value, postBt: b.querySelector('.v-post-bt').value, postSp: b.querySelector('.v-post-sp').value
+                    },
+                    rehabs: sessionRehabs, comps: sessionComps
+                }));
+
+                let hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
+                // 同じ日付のエントリがあれば上書き
+                const existIdx = hist.findIndex(h => h.date === date);
+                const histEntry = { date, vPreS: b.querySelector('.v-pre-s').value, vPrePr: b.querySelector('.v-pre-pr').value, comps: sessionComps };
+                if (existIdx >= 0) { hist[existIdx] = histEntry; } else { hist.push(histEntry); }
+                localStorage.setItem(DB_PREFIX + 'hist_' + name, JSON.stringify(hist.slice(-30)));
+
+                // ノート出力
+                note += `【${h}:${m}】 ${name}（${age}${sex ? '・' + sex : ''}・${side || '-'}） 疾患：${dis}${disSide ? '（' + disSide + '）' : ''}\n`;
+
+                // バイタル（前後）
+                const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
+                const vPrePrV = b.querySelector('.v-pre-pr').value, vPreBt = b.querySelector('.v-pre-bt').value, vPreSp = b.querySelector('.v-pre-sp').value;
+                const vPostS = b.querySelector('.v-post-s').value, vPostD = b.querySelector('.v-post-d').value;
+                const vPostPr = b.querySelector('.v-post-pr').value, vPostBt = b.querySelector('.v-post-bt').value, vPostSp = b.querySelector('.v-post-sp').value;
+                if (vPreS) note += `前) BP:${vPreS}/${vPreD} PR:${vPrePrV} BT:${vPreBt || '-'}℃ SpO2:${vPreSp || '-'}%\n`;
+                if (vPostS) note += `後) BP:${vPostS}/${vPostD} PR:${vPostPr} BT:${vPostBt || '-'}℃ SpO2:${vPostSp || '-'}%\n`;
+
+                // Br.stage
+                if (side && (brUe !== '-' || brHa !== '-' || brLe !== '-')) {
+                    note += `Br.stage: 上肢${brUe} 手指${brHa} 下肢${brLe}\n`;
+                }
+
+                // 高次脳・補助具
+                if (hbS === 'あり') note += `高次脳機能障害: ${hbD || '詳細未記入'}\n`;
+                if (dsS === 'あり') note += `補助具: ${dsD || '詳細未記入'}\n`;
+
+                // リハ内容（時間・Borg含む）
+                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => { let parts = []; if (r.min || r.sec) parts.push(`${r.min || '0'}分${r.sec || '0'}秒`); if (r.c !== '0' && r.c !== '') parts.push(`${r.c}回`); if (r.s !== '0' && r.s !== '') parts.push(`${r.s}set`); if (r.m && r.m !== '') parts.push(`${r.m}m`); if (r.nrs && r.nrs !== '') parts.push(`NRS:${r.nrs}`); if (r.bg && r.bg !== '') parts.push(`Borg:${r.bg}`); return ` ・${r.n}${parts.length ? ' ' + parts.join(' ') : ''}`; }).join('\n')}\n`;
+
+                // 評価項目（左右・単位）
+                if (sessionComps.length) note += `評価:\n${sessionComps.map(c => {
+                    if (c.sd === 'lr') return ` ・${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`;
+                    if (c.sd === 'l') return ` ・${c.n}: 左${c.l || '-'} ${c.u}`;
+                    if (c.sd === 'r') return ` ・${c.n}: 右${c.r || '-'} ${c.u}`;
+                    return ` ・${c.n}: ${c.l || c.r || '-'} ${c.u}`;
+                }).join('\n')}\n`;
+
+                if (ins) note += `学び:\n${ins}\n`;
+                if (b.querySelector('.p-rem').value) note += `備考: ${b.querySelector('.p-rem').value}\n`;
+                note += `\n`;
+
+                // 症例患者の場合、SOAP経過記録に自動保存
+                const caseChk = b.querySelector('.case-chk');
+                if (caseChk && caseChk.checked) {
+                    const soapS = b.querySelector('.p-soap-s') ? b.querySelector('.p-soap-s').value.trim() : '';
+                    const soapP = b.querySelector('.p-soap-p') ? b.querySelector('.p-soap-p').value.trim() : '';
+                    // O = 検査項目テキスト
+                    let oText = '';
+                    if (sessionComps.length) {
+                        oText = sessionComps.map(c => {
+                            if (c.sd === 'lr') return `${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`;
+                            if (c.sd === 'l') return `${c.n}: 左${c.l || '-'} ${c.u}`;
+                            if (c.sd === 'r') return `${c.n}: 右${c.r || '-'} ${c.u}`;
+                            return `${c.n}: ${c.l || c.r || '-'} ${c.u}`;
+                        }).join('\n');
+                    }
+                    // A = 学び
+                    const aText = ins;
+                    // SOAP保存
+                    const soapData = { date, s: soapS, o: oText, a: aText, p: soapP };
+                    let soapHist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+                    const sIdx = soapHist.findIndex(h => h.date === date);
+                    if (sIdx >= 0) { soapHist[sIdx] = soapData; } else { soapHist.push(soapData); }
+                    soapHist.sort((a, b) => a.date.localeCompare(b.date));
+                    localStorage.setItem(DB_PREFIX + 'soap_' + name, JSON.stringify(soapHist));
+                }
+            });
+
+            if (warnings.length > 0 && !confirm("警告があります。出力しますか？\n" + warnings.join("\n"))) return;
+            document.getElementById('output').innerText = note; document.getElementById('output').style.display = 'block';
+            document.getElementById('copy-note-btn').style.display = 'inline-block';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(note).then(() => alert("作成完了！全データを記憶しました。")).catch(() => alert("作成完了！（クリップボードは手動でコピーしてください）"));
+            } else {
+                alert("作成完了！（クリップボードは手動でコピーしてください）");
+            }
+        }
+
+        let currentChartName = '';
+
+        function switchChartTab(tab) {
+            document.getElementById('vital-chart-area').style.display = tab === 'vital' ? 'block' : 'none';
+            document.getElementById('score-chart-area').style.display = tab === 'score' ? 'block' : 'none';
+            document.getElementById('tab-vital').style.background = tab === 'vital' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-vital').style.color = tab === 'vital' ? 'white' : 'var(--primary)';
+            document.getElementById('tab-score').style.background = tab === 'score' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-score').style.color = tab === 'score' ? 'white' : 'var(--primary)';
+            if (tab === 'score') renderScoreChart(currentChartName);
+        }
+
+        function openChartModal(name) {
+            currentChartName = name;
+            document.getElementById('chart-title').innerText = `${name} 推移`;
+            const history = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
+            if (!history.length) return alert("データ不足");
+            if (vitalChartInstance) vitalChartInstance.destroy();
+            vitalChartInstance = new Chart(document.getElementById('vitalChart'), {
+                type: 'line', data: {
+                    labels: history.map(h => h.date), datasets: [
+                        { label: '血圧(上)', data: history.map(h => parseInt(h.vPreS) || null), borderColor: '#ef4444', pointRadius: 4, borderWidth: 2 },
+                        { label: '脈拍', data: history.map(h => parseInt(h.vPrePr) || null), borderColor: '#3b82f6', pointRadius: 4, borderWidth: 2 }
+                    ]
+                }
+            });
+            switchChartTab('vital');
+            document.getElementById('chart-modal').style.display = 'block';
+        }
+
+        function renderScoreChart(name) {
+            const history = JSON.parse(localStorage.getItem(DB_PREFIX + 'hist_' + name)) || [];
+            if (!history.length) return;
+            // 全履歴から検査項目名を収集
+            const itemNames = new Set();
+            history.forEach(h => { if (h.comps) h.comps.forEach(c => itemNames.add(c.n)); });
+            if (!itemNames.size) {
+                if (scoreChartInstance) { scoreChartInstance.destroy(); scoreChartInstance = null; }
+                const area = document.getElementById('score-chart-area');
+                let msg = area.querySelector('.no-data-msg');
+                if (!msg) { msg = document.createElement('p'); msg.className = 'no-data-msg'; msg.style.cssText = 'color:#94a3b8;text-align:center;padding:30px 0;'; area.insertBefore(msg, area.firstChild); }
+                msg.textContent = '検査結果の履歴がまだありません';
+                document.getElementById('scoreChart').style.display = 'none';
+                return;
+            }
+            const oldMsg = document.getElementById('score-chart-area').querySelector('.no-data-msg');
+            if (oldMsg) oldMsg.remove();
+            document.getElementById('scoreChart').style.display = '';
+
+            // 値のパース（"0"もnullではなく0として扱う）
+            function parseVal(v) {
+                if (v === undefined || v === null || v === '') return null;
+                const n = parseFloat(v);
+                return isNaN(n) ? null : n;
+            }
+
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+            const datasets = [];
+            let idx = 0;
+            itemNames.forEach(itemName => {
+                // 空文字列ではなく実際に値が存在するかチェック
+                const hasL = history.some(h => h.comps && h.comps.find(cc => cc.n === itemName && cc.l !== undefined && cc.l !== ''));
+                const hasR = history.some(h => h.comps && h.comps.find(cc => cc.n === itemName && cc.r !== undefined && cc.r !== ''));
+                const color = colors[idx % colors.length];
+                const baseOpts = { tension: 0.3, spanGaps: true, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2, yAxisID: 'y' + idx };
+                if (hasL) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: `${itemName}(左)`,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); return cc ? parseVal(cc.l) : null; }),
+                        borderColor: color, backgroundColor: color + '20'
+                    });
+                }
+                if (hasR) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: `${itemName}(右)`,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); return cc ? parseVal(cc.r) : null; }),
+                        borderColor: color, backgroundColor: color + '20', borderDash: [5, 5]
+                    });
+                }
+                // 左右どちらも空の場合でも項目自体は存在するので表示
+                if (!hasL && !hasR) {
+                    datasets.push({
+                        ...baseOpts,
+                        label: itemName,
+                        data: history.map(h => { const cc = h.comps && h.comps.find(cc => cc.n === itemName); if (!cc) return null; return parseVal(cc.l) !== null ? parseVal(cc.l) : parseVal(cc.r); }),
+                        borderColor: color, backgroundColor: color + '20'
+                    });
+                }
+                idx++;
+            });
+            // 多軸設定（全軸を表示、見やすさのため交互に左右配置）
+            const scales = { x: { display: true, ticks: { font: { size: 10 } } } };
+            let axisIdx = 0;
+            const totalAxes = itemNames.size;
+            itemNames.forEach(itemName => {
+                const unit = history.flatMap(h => (h.comps || []).filter(cc => cc.n === itemName && cc.u)).map(cc => cc.u)[0] || '';
+                scales['y' + axisIdx] = {
+                    type: 'linear', display: true,
+                    position: axisIdx % 2 === 0 ? 'left' : 'right',
+                    title: { display: true, text: `${itemName}${unit ? '(' + unit + ')' : ''}`, font: { size: totalAxes > 4 ? 8 : 10 } },
+                    ticks: { font: { size: totalAxes > 4 ? 8 : 10 } },
+                    grid: { drawOnChartArea: axisIdx === 0 }
+                };
+                axisIdx++;
+            });
+            if (scoreChartInstance) scoreChartInstance.destroy();
+            scoreChartInstance = new Chart(document.getElementById('scoreChart'), {
+                type: 'line',
+                data: { labels: history.map(h => h.date), datasets },
+                options: {
+                    responsive: true, interaction: { mode: 'index', intersect: false }, scales,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } },
+                        tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y : '-'); } } }
+                    }
+                }
+            });
+        }
+
+        function showInsHistory() {
+            const sel = document.getElementById('ins-history-patient');
+            sel.innerHTML = '<option value="">-- 患者を選択 --</option>';
+            // localStorageからins_hist_のある患者名を収集
+            const patients = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(DB_PREFIX + 'ins_hist_')) {
+                    patients.push(k.replace(DB_PREFIX + 'ins_hist_', ''));
+                }
+            }
+            patients.sort();
+            patients.forEach(p => {
+                const opt = document.createElement('option'); opt.value = p; opt.textContent = p; sel.appendChild(opt);
+            });
+            document.getElementById('ins-history-content').innerHTML = patients.length ? '<p style="color:#94a3b8;text-align:center;">患者を選択してください</p>' : '<p style="color:#94a3b8;text-align:center;">まだ履歴がありません</p>';
+            document.getElementById('ins-history-modal').style.display = 'block';
+        }
+
+        function escHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function loadInsHistory() {
+            const name = document.getElementById('ins-history-patient').value;
+            const cont = document.getElementById('ins-history-content');
+            if (!name) { cont.innerHTML = '<p style="color:#94a3b8;text-align:center;">患者を選択してください</p>'; return; }
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'ins_hist_' + name)) || [];
+            if (!hist.length) { cont.innerHTML = '<p style="color:#94a3b8;text-align:center;">履歴がありません</p>'; return; }
+            // 新しい順に表示
+            const reversed = [...hist].reverse();
+            let html = '';
+            reversed.forEach((entry, i) => {
+                html += `<div style="border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:8px; background:${i % 2 === 0 ? '#f8fafc' : '#fff'};">`;
+                html += `<div style="font-weight:bold; color:var(--primary); font-size:0.85rem; margin-bottom:5px;">📅 ${escHtml(entry.date || '日付なし')}</div>`;
+                if (entry.ins) html += `<div style="margin-bottom:4px;"><span style="font-weight:bold;color:#475569;font-size:0.75rem;">💡 学び・アセスメント</span><div style="white-space:pre-wrap;font-size:0.8rem;padding:5px;background:#f0fdf4;border-radius:4px;border:1px solid #bbf7d0;">${escHtml(entry.ins)}</div></div>`;
+                if (entry.rem) html += `<div><span style="font-weight:bold;color:#475569;font-size:0.75rem;">💬 備考</span><div style="white-space:pre-wrap;font-size:0.8rem;padding:5px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe;">${escHtml(entry.rem)}</div></div>`;
+                html += '</div>';
+            });
+            cont.innerHTML = html;
+        }
+
+        function generateVerbalScript() {
+            let s = ""; document.querySelectorAll('.patient-block').forEach(b => {
+                const name = b.querySelector('.p-name').value;
+                const sex = b.querySelector('.p-sex').value;
+                const age = b.querySelector('.p-age').value;
+                const dis = b.querySelector('.p-disease').value;
+                const disSide = b.querySelector('.p-dis-side').value;
+                const side = b.querySelector('.p-side').value;
+                const h = b.querySelector('.p-h').value;
+                const ins = b.querySelector('.p-ins').value;
+                const disText = dis ? `${dis}${disSide ? '(' + disSide + ')' : ''}` : '';
+                s += `【${name}】${age}${sex ? ' ' + sex : ''}${side ? ' 麻痺側:' + side : ''}${disText ? ' ' + disText : ''}\n「${h}時より介入。バイタル安定。今日は〜を実施。アセスメントとして${ins.substring(0, 40)}...と考えました。」\n\n`;
+            });
+            document.getElementById('script-cont').innerText = s || "データなし"; document.getElementById('script-modal').style.display = 'block';
+        }
+
+        function exportData() {
+            const data = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith(DB_PREFIX)) data[k] = localStorage.getItem(k); }
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `PT_Practice_Backup.json`; a.click();
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let count = 0;
+                    for (const key in data) {
+                        localStorage.setItem(key, data[key]);
+                        count++;
+                    }
+                    alert(`✅ ${count}件のデータを復元しました。ページを再読込します。`);
+                    location.reload();
+                } catch (err) {
+                    alert('❌ ファイルの読み込みに失敗しました。正しいバックアップファイルを選択してください。');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function showDataStatus() {
+            const bar = document.getElementById('data-status-bar');
+            let patientCount = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith(DB_PREFIX + 'full_mem_')) patientCount++;
+            }
+            if (patientCount > 0) {
+                bar.style.background = '#d1fae5';
+                bar.style.color = '#065f46';
+                bar.style.borderTop = '2px solid #10b981';
+                bar.innerHTML = `✅ ${patientCount}名分のデータが保存されています`;
+            } else {
+                bar.style.background = '#fef3c7';
+                bar.style.color = '#92400e';
+                bar.style.borderTop = '2px solid #f59e0b';
+                bar.innerHTML = '⚠️ 保存データがありません。バックアップがあれば <button onclick="importData()" style="background:#f59e0b;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:0.8rem;cursor:pointer;">📂 データを復元</button> してください';
+            }
+            bar.style.display = 'block';
+            setTimeout(() => { if (patientCount > 0) { bar.style.opacity = '0'; setTimeout(() => { bar.style.display = 'none'; bar.style.opacity = '1'; }, 500); } }, 4000);
+        }
+
+        // === セクション別リセット関数 ===
+        function resetVitals(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.v-pre-s,.v-pre-d,.v-pre-pr,.v-pre-bt,.v-pre-sp,.v-post-s,.v-post-d,.v-post-pr,.v-post-bt,.v-post-sp').forEach(el => el.value = '');
+        }
+        function resetRehabs(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                row.querySelector('.r-chk').checked = false;
+                row.classList.remove('checked-row');
+                row.querySelector('.r-min').value = '';
+                row.querySelector('.r-sec').value = '';
+                row.querySelector('.r-c').selectedIndex = 0;
+                row.querySelector('.r-s').selectedIndex = 0;
+                if (row.querySelector('.r-m')) row.querySelector('.r-m').value = '';
+                row.querySelector('.r-nrs').selectedIndex = 0;
+                row.querySelector('.r-bg').selectedIndex = 0;
+            });
+        }
+        function resetBrstage(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.br-ue, .br-ha, .br-le').forEach(s => s.value = '-');
+        }
+        function resetComps(btn) {
+            const b = btn.closest('.patient-block');
+            b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                const chk = row.querySelector('.c-chk');
+                if (chk) {
+                    chk.checked = false;
+                    const sideEl = row.querySelector('.c-side');
+                    if (sideEl) { sideEl.value = 'lr'; toggleCompSide(sideEl); }
+                    if (row.querySelector('.c-r')) row.querySelector('.c-r').value = '';
+                    if (row.querySelector('.c-l')) row.querySelector('.c-l').value = '';
+                    if (row.querySelector('.c-val')) row.querySelector('.c-val').value = '';
+                }
+            });
+        }
+        function resetTextarea(btn, cls) {
+            const b = btn.closest('.patient-block');
+            b.querySelector(cls).value = '';
+        }
+        function resetHbDs(btn, selCls, inputCls) {
+            const b = btn.closest('.patient-block');
+            const sel = b.querySelector(selCls);
+            sel.value = 'なし'; tgD(sel);
+            b.querySelector(inputCls).value = '';
+        }
+
+        function clearAllInputs() {
+            if (!confirm('すべての入力項目をクリアしますか？\n（記憶済みのデータには影響しません）')) return;
+            document.querySelectorAll('.patient-block').forEach(b => {
+                // テキスト入力・テキストエリアをクリア
+                b.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
+                // セレクトをデフォルトに
+                b.querySelector('.p-age').selectedIndex = 0;
+                b.querySelector('.p-sex').value = '';
+                b.querySelector('.p-side').value = '';
+                highlight(b.querySelector('.p-side'));
+                b.querySelector('.p-disease').selectedIndex = 0;
+                b.querySelector('.p-dis-side').value = '';
+                b.querySelector('.p-h').selectedIndex = 0;
+                b.querySelector('.p-m').selectedIndex = 0;
+                b.querySelector('.p-hb').value = 'なし'; tgD(b.querySelector('.p-hb'));
+                b.querySelector('.p-ds').value = 'なし'; tgD(b.querySelector('.p-ds'));
+                b.querySelectorAll('.br-ue, .br-ha, .br-le').forEach(s => s.value = '-');
+                // リハ内容のチェックを外してリセット
+                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
+                    row.querySelector('.r-chk').checked = false;
+                    row.classList.remove('checked-row');
+                    row.querySelector('.r-min').value = '';
+                    row.querySelector('.r-sec').value = '';
+                    row.querySelector('.r-c').selectedIndex = 0;
+                    row.querySelector('.r-s').selectedIndex = 0;
+                    if (row.querySelector('.r-m')) row.querySelector('.r-m').value = '';
+                    row.querySelector('.r-nrs').selectedIndex = 0;
+                    row.querySelector('.r-bg').selectedIndex = 0;
+                });
+                // 評価項目のチェックを外してリセット
+                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
+                    const chk = row.querySelector('.c-chk');
+                    if (chk) {
+                        chk.checked = false;
+                        const sideEl = row.querySelector('.c-side');
+                        if (sideEl) { sideEl.value = 'lr'; toggleCompSide(sideEl); }
+                        if (row.querySelector('.c-r')) row.querySelector('.c-r').value = '';
+                        if (row.querySelector('.c-l')) row.querySelector('.c-l').value = '';
+                        if (row.querySelector('.c-val')) row.querySelector('.c-val').value = '';
+                    }
+                });
+            });
+            // 出力エリアも非表示に
+            document.getElementById('output').style.display = 'none';
+            document.getElementById('output').innerText = '';
+        }
+
+        window.onload = () => { loadConfig(); document.getElementById('dateInput').valueAsDate = new Date(); addPatientBlock(); showDataStatus(); };
+
+        // メニュー外クリックで閉じる
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('nav-menu');
+            const menuContainer = document.querySelector('.menu-container');
+            if (menu.style.display === 'block' && !menuContainer.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // === アセスメントシート機能 ===
+        const ASSESS_FIELDS_1 = ['as1-age', 'as1-sex', 'as1-diagnosis', 'as1-comorbidity', 'as1-pastHistory', 'as1-currentHistory', 'as1-medication', 'as1-restrictions', 'as1-family', 'as1-livingEnv', 'as1-preLife', 'as1-wardLife', 'as1-basicMovement', 'as1-adl', 'as1-chiefComplaint', 'as1-otherProfPlan', 'as1-methods', 'as1-prognosis', 'as1-stg', 'as1-ltg', 'as1-treatment'];
+        const ASSESS_FIELDS_2 = ['as2-healthCondition', 'as2-bodyFunction', 'as2-activityCan', 'as2-activityDo', 'as2-participation', 'as2-envPositive', 'as2-envNegative', 'as2-personalFactor', 'as2-integration'];
+
+        function showAssessmentSheet() {
+            const menu = document.getElementById('nav-menu');
+            menu.style.display = 'none';
+            // 患者リスト構築
+            const sel = document.getElementById('assess-patient');
+            sel.innerHTML = '<option value="">-- 患者を選択 --</option>';
+            // 保存済み患者を追加
+            const savedPatients = new Set();
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(DB_PREFIX + 'full_mem_')) {
+                    savedPatients.add(k.replace(DB_PREFIX + 'full_mem_', ''));
+                }
+                if (k.startsWith(DB_PREFIX + 'assess_')) {
+                    savedPatients.add(k.replace(DB_PREFIX + 'assess_', ''));
+                }
+            }
+            // アルファベット患者リストも追加
+            alphabet.forEach(n => savedPatients.add(n + 'さん'));
+            const sorted = Array.from(savedPatients).sort();
+            sorted.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.textContent = p;
+                sel.appendChild(opt);
+            });
+            // 日付を今日に
+            document.getElementById('assess-date').valueAsDate = new Date();
+            // フォームクリア
+            clearAssessForm();
+            switchAssessTab('sheet1');
+            document.getElementById('assess-modal').style.display = 'block';
+        }
+
+        function switchAssessTab(tab) {
+            document.getElementById('assess-sheet1').style.display = tab === 'sheet1' ? 'block' : 'none';
+            document.getElementById('assess-sheet2').style.display = tab === 'sheet2' ? 'block' : 'none';
+            document.getElementById('assess-tab1').classList.toggle('active', tab === 'sheet1');
+            document.getElementById('assess-tab2').classList.toggle('active', tab === 'sheet2');
+        }
+
+        function clearAssessForm() {
+            ASSESS_FIELDS_1.concat(ASSESS_FIELDS_2).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        function getAssessData() {
+            const data = { sheet1: {}, sheet2: {} };
+            ASSESS_FIELDS_1.forEach(id => { data.sheet1[id] = document.getElementById(id).value; });
+            ASSESS_FIELDS_2.forEach(id => { data.sheet2[id] = document.getElementById(id).value; });
+            return data;
+        }
+
+        function setAssessData(data) {
+            if (!data) return;
+            if (data.sheet1) ASSESS_FIELDS_1.forEach(id => { if (data.sheet1[id] !== undefined) document.getElementById(id).value = data.sheet1[id]; });
+            if (data.sheet2) ASSESS_FIELDS_2.forEach(id => { if (data.sheet2[id] !== undefined) document.getElementById(id).value = data.sheet2[id]; });
+        }
+
+        function saveAssessment() {
+            const name = document.getElementById('assess-patient').value;
+            const date = document.getElementById('assess-date').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            if (!date) { alert('日付を選択してください'); return; }
+            const data = getAssessData();
+            data.date = date;
+            // 既存履歴を取得
+            let hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'assess_' + name)) || [];
+            const idx = hist.findIndex(h => h.date === date);
+            if (idx >= 0) { hist[idx] = data; } else { hist.push(data); }
+            // 日付順にソート
+            hist.sort((a, b) => a.date.localeCompare(b.date));
+            localStorage.setItem(DB_PREFIX + 'assess_' + name, JSON.stringify(hist));
+            // ステータスバーで通知
+            const bar = document.getElementById('data-status-bar');
+            bar.style.background = '#d1fae5'; bar.style.color = '#065f46'; bar.style.borderTop = '2px solid #10b981';
+            bar.innerHTML = `✅ ${name} のアセスメント（${date}）を保存しました`;
+            bar.style.display = 'block'; bar.style.opacity = '1';
+            setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => { bar.style.display = 'none'; bar.style.opacity = '1'; }, 500); }, 3000);
+        }
+
+        function loadAssessment() {
+            const name = document.getElementById('assess-patient').value;
+            const date = document.getElementById('assess-date').value;
+            clearAssessForm();
+            if (!name) return;
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'assess_' + name)) || [];
+            if (!hist.length) return;
+            // 選択日のデータがあればロード、なければ最新をロード
+            let entry = hist.find(h => h.date === date);
+            if (!entry) entry = hist[hist.length - 1];
+            if (entry) {
+                document.getElementById('assess-date').value = entry.date;
+                setAssessData(entry);
+            }
+        }
+
+        function loadAssessmentByDate() {
+            const name = document.getElementById('assess-patient').value;
+            const date = document.getElementById('assess-date').value;
+            if (!name || !date) return;
+            clearAssessForm();
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'assess_' + name)) || [];
+            const entry = hist.find(h => h.date === date);
+            if (entry) setAssessData(entry);
+        }
+
+        function loadAssessmentDates() {
+            const name = document.getElementById('assess-patient').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'assess_' + name)) || [];
+            if (!hist.length) { alert(name + ' のアセスメント履歴はありません'); return; }
+            const dates = hist.map(h => h.date).join('\n');
+            const selected = prompt('保存済みの日付一覧:\n' + dates + '\n\n表示したい日付を入力（例: 2026-02-23）:');
+            if (selected) {
+                const entry = hist.find(h => h.date === selected.trim());
+                if (entry) {
+                    document.getElementById('assess-date').value = entry.date;
+                    clearAssessForm();
+                    setAssessData(entry);
+                } else {
+                    alert('該当する日付のデータがありません');
+                }
+            }
+        }
+
+        function generateAssessmentNote() {
+            const name = document.getElementById('assess-patient').value;
+            const date = document.getElementById('assess-date').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+            let note = `=== アセスメントシート ===\n`;
+            note += `患者: ${name}  記入日: ${date}\n\n`;
+
+            // アセスメントⅠ
+            note += `━━ アセスメントⅠ ━━\n\n`;
+            note += `【基礎情報・医学的情報】\n`;
+            if (v('as1-age')) note += `年齢: ${v('as1-age')}\n`;
+            if (v('as1-sex')) note += `性別: ${v('as1-sex')}\n`;
+            if (v('as1-diagnosis')) note += `診断名: ${v('as1-diagnosis')}\n`;
+            if (v('as1-comorbidity')) note += `合併症: ${v('as1-comorbidity')}\n`;
+            if (v('as1-pastHistory')) note += `既往歴: ${v('as1-pastHistory')}\n`;
+            if (v('as1-currentHistory')) note += `現病歴:\n${v('as1-currentHistory')}\n`;
+            if (v('as1-medication')) note += `服薬状況: ${v('as1-medication')}\n`;
+            if (v('as1-restrictions')) note += `安静度・特記事項: ${v('as1-restrictions')}\n`;
+            note += `\n`;
+
+            note += `【社会的背景・生活情報】\n`;
+            if (v('as1-family')) note += `家族構成: ${v('as1-family')}\n`;
+            if (v('as1-livingEnv')) note += `住環境: ${v('as1-livingEnv')}\n`;
+            if (v('as1-preLife')) note += `入院前の生活:\n${v('as1-preLife')}\n`;
+            if (v('as1-wardLife')) note += `病棟の生活:\n${v('as1-wardLife')}\n`;
+            note += `\n`;
+
+            note += `【基本動作・ADL】\n`;
+            if (v('as1-basicMovement')) note += `基本動作:\n${v('as1-basicMovement')}\n`;
+            if (v('as1-adl')) note += `病棟ADL:\n${v('as1-adl')}\n`;
+            note += `\n`;
+
+            if (v('as1-chiefComplaint')) note += `【主訴】\n${v('as1-chiefComplaint')}\n\n`;
+
+            note += `【介入方針・計画・目標】\n`;
+            if (v('as1-otherProfPlan')) note += `他職種の介入方針・目標:\n${v('as1-otherProfPlan')}\n`;
+            if (v('as1-methods')) note += `方法: ${v('as1-methods')}\n`;
+            if (v('as1-prognosis')) note += `予後予測:\n${v('as1-prognosis')}\n`;
+            if (v('as1-stg')) note += `短期目標: ${v('as1-stg')}\n`;
+            if (v('as1-ltg')) note += `長期目標: ${v('as1-ltg')}\n`;
+            if (v('as1-treatment')) note += `治療プログラム:\n${v('as1-treatment')}\n`;
+            note += `\n`;
+
+            // アセスメントⅡ（ICF）
+            note += `━━ アセスメントⅡ（ICF） ━━\n\n`;
+            if (v('as2-healthCondition')) note += `【健康状態】\n${v('as2-healthCondition')}\n\n`;
+            if (v('as2-bodyFunction')) note += `【心身機能・身体構造】\n${v('as2-bodyFunction')}\n\n`;
+            if (v('as2-activityCan') || v('as2-activityDo')) {
+                note += `【活動】\n`;
+                if (v('as2-activityCan')) note += `できる活動: ${v('as2-activityCan')}\n`;
+                if (v('as2-activityDo')) note += `している活動: ${v('as2-activityDo')}\n`;
+                note += `\n`;
+            }
+            if (v('as2-participation')) note += `【参加】\n${v('as2-participation')}\n\n`;
+            if (v('as2-envPositive') || v('as2-envNegative')) {
+                note += `【環境因子】\n`;
+                if (v('as2-envPositive')) note += `促進因子: ${v('as2-envPositive')}\n`;
+                if (v('as2-envNegative')) note += `阻害因子: ${v('as2-envNegative')}\n`;
+                note += `\n`;
+            }
+            if (v('as2-personalFactor')) note += `【個人因子】\n${v('as2-personalFactor')}\n\n`;
+            if (v('as2-integration')) note += `【統合と解釈】\n${v('as2-integration')}\n\n`;
+
+            // 出力表示
+            const outputEl = document.getElementById('assess-output');
+            outputEl.innerText = note;
+            outputEl.style.display = 'block';
+            // クリップボードにコピー
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(note).then(() => alert('ノートを出力し、クリップボードにコピーしました！')).catch(() => alert('ノートを出力しました！（手動でコピーしてください）'));
+            } else {
+                alert('ノートを出力しました！（手動でコピーしてください）');
+            }
+        }
+
+        // === 症例患者トグル ===
+        function toggleCasePatient(chk) {
+            const block = chk.closest('.patient-block');
+            const sField = block.querySelector('.soap-s-field');
+            const pField = block.querySelector('.soap-p-field');
+            if (chk.checked) {
+                if (sField) sField.classList.add('visible');
+                if (pField) pField.classList.add('visible');
+            } else {
+                if (sField) sField.classList.remove('visible');
+                if (pField) pField.classList.remove('visible');
+            }
+        }
+
+        // === ノートコピー（ヘッダー除外）===
+        function copyNoteBody() {
+            const text = document.getElementById('output').innerText;
+            // 1行目（ヘッダー）と空行を除外してコピー
+            const lines = text.split('\n');
+            let startIdx = 0;
+            // 「理学療法実習 デイリーノート」で始まる行をスキップ
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('理学療法実習')) { startIdx = i + 1; continue; }
+                if (startIdx > 0 && lines[i].trim() === '') { startIdx = i + 1; continue; }
+                break;
+            }
+            const body = lines.slice(startIdx).join('\n');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(body).then(() => alert('ヘッダーを除外してコピーしました！')).catch(() => alert('コピーに失敗しました'));
+            }
+        }
+
+        // === 経過記録（SOAP）機能 ===
+        function showProgressRecord() {
+            const menu = document.getElementById('nav-menu');
+            menu.style.display = 'none';
+            const sel = document.getElementById('soap-patient');
+            sel.innerHTML = '<option value="">-- 患者を選択 --</option>';
+            const savedPatients = new Set();
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(DB_PREFIX + 'full_mem_')) savedPatients.add(k.replace(DB_PREFIX + 'full_mem_', ''));
+                if (k.startsWith(DB_PREFIX + 'soap_')) savedPatients.add(k.replace(DB_PREFIX + 'soap_', ''));
+            }
+            alphabet.forEach(n => savedPatients.add(n + 'さん'));
+            Array.from(savedPatients).sort().forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.textContent = p;
+                sel.appendChild(opt);
+            });
+            showSOAPList();
+            document.getElementById('soap-modal').style.display = 'block';
+        }
+
+        function clearSOAPForm() {
+            ['soap-s', 'soap-o', 'soap-a', 'soap-p'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const out = document.getElementById('soap-output');
+            if (out) out.style.display = 'none';
+        }
+
+        function showSOAPList() {
+            document.getElementById('soap-list-view').style.display = 'block';
+            document.getElementById('soap-input-view').style.display = 'none';
+            renderSOAPHistory();
+        }
+
+        function showSOAPInput(editDate) {
+            document.getElementById('soap-list-view').style.display = 'none';
+            document.getElementById('soap-input-view').style.display = 'block';
+            clearSOAPForm();
+            if (editDate) {
+                // 既存記録を編集
+                document.getElementById('soap-date').value = editDate;
+                const name = document.getElementById('soap-patient').value;
+                const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+                const entry = hist.find(h => h.date === editDate);
+                if (entry) {
+                    document.getElementById('soap-s').value = entry.s || '';
+                    document.getElementById('soap-o').value = entry.o || '';
+                    document.getElementById('soap-a').value = entry.a || '';
+                    document.getElementById('soap-p').value = entry.p || '';
+                }
+            } else {
+                // 新規入力
+                document.getElementById('soap-date').valueAsDate = new Date();
+            }
+        }
+
+        function onSOAPPatientChange() {
+            showSOAPList();
+        }
+
+        function renderSOAPHistory() {
+            const name = document.getElementById('soap-patient').value;
+            const container = document.getElementById('soap-history-list');
+            const exportBtn = document.getElementById('soap-export-all-btn');
+            const allOut = document.getElementById('soap-all-output');
+            exportBtn.style.display = 'none';
+            allOut.style.display = 'none';
+            if (!name) {
+                container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:30px 0;">患者を選択すると記録一覧が表示されます</p>';
+                return;
+            }
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+            if (!hist.length) {
+                container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:30px 0;">まだ記録がありません。「✏️ 新規入力」から記録を追加してください。</p>';
+                return;
+            }
+            // 新しい日付順にソート
+            const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
+            let html = '';
+            sorted.forEach(entry => {
+                const truncate = (str, len) => str && str.length > len ? str.substring(0, len) + '…' : (str || '');
+                html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-weight:bold;color:var(--primary);font-size:0.95rem;">📅 ${entry.date}</span>
+                        <div style="display:flex;gap:4px;">
+                            <button onclick="showSOAPInput('${entry.date}')" style="padding:4px 10px;background:var(--secondary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">✏️ 編集</button>
+                            <button onclick="deleteSOAPEntry('${entry.date}')" style="padding:4px 10px;background:#ef4444;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">🗑</button>
+                        </div>
+                    </div>`;
+                if (entry.s) html += `<div style="margin-bottom:4px;"><span style="display:inline-block;background:#3b82f6;color:white;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;margin-right:4px;">S</span><span style="font-size:0.82rem;">${truncate(entry.s, 120)}</span></div>`;
+                if (entry.o) html += `<div style="margin-bottom:4px;"><span style="display:inline-block;background:#10b981;color:white;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;margin-right:4px;">O</span><span style="font-size:0.82rem;">${truncate(entry.o, 120)}</span></div>`;
+                if (entry.a) html += `<div style="margin-bottom:4px;"><span style="display:inline-block;background:#f59e0b;color:white;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;margin-right:4px;">A</span><span style="font-size:0.82rem;">${truncate(entry.a, 120)}</span></div>`;
+                if (entry.p) html += `<div style="margin-bottom:4px;"><span style="display:inline-block;background:#8b5cf6;color:white;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;margin-right:4px;">P</span><span style="font-size:0.82rem;">${truncate(entry.p, 120)}</span></div>`;
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+            exportBtn.style.display = 'block';
+        }
+
+        function deleteSOAPEntry(date) {
+            const name = document.getElementById('soap-patient').value;
+            if (!confirm(`${date} の記録を削除しますか？`)) return;
+            let hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+            hist = hist.filter(h => h.date !== date);
+            localStorage.setItem(DB_PREFIX + 'soap_' + name, JSON.stringify(hist));
+            renderSOAPHistory();
+        }
+
+        function exportAllSOAP() {
+            const name = document.getElementById('soap-patient').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+            if (!hist.length) { alert('記録がありません'); return; }
+            const sorted = [...hist].sort((a, b) => a.date.localeCompare(b.date));
+            let note = `=== ${name} 経過記録（SOAP）全記録 ===\n\n`;
+            sorted.forEach(entry => {
+                note += `━━ ${entry.date} ━━\n`;
+                if (entry.s) note += `【S：主観的情報】\n${entry.s}\n`;
+                if (entry.o) note += `【O：客観的情報】\n${entry.o}\n`;
+                if (entry.a) note += `【A：アセスメント】\n${entry.a}\n`;
+                if (entry.p) note += `【P：計画】\n${entry.p}\n`;
+                note += `\n`;
+            });
+            const outputEl = document.getElementById('soap-all-output');
+            outputEl.innerText = note;
+            outputEl.style.display = 'block';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(note).then(() => alert(`${sorted.length}件の経過記録をコピーしました！`)).catch(() => alert('出力しました（手動でコピーしてください）'));
+            } else {
+                alert('出力しました（手動でコピーしてください）');
+            }
+        }
+
+        function saveSOAP() {
+            const name = document.getElementById('soap-patient').value;
+            const date = document.getElementById('soap-date').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            if (!date) { alert('日付を選択してください'); return; }
+            const data = {
+                date,
+                s: document.getElementById('soap-s').value,
+                o: document.getElementById('soap-o').value,
+                a: document.getElementById('soap-a').value,
+                p: document.getElementById('soap-p').value
+            };
+            let hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
+            const idx = hist.findIndex(h => h.date === date);
+            if (idx >= 0) { hist[idx] = data; } else { hist.push(data); }
+            hist.sort((a, b) => a.date.localeCompare(b.date));
+            localStorage.setItem(DB_PREFIX + 'soap_' + name, JSON.stringify(hist));
+            const bar = document.getElementById('data-status-bar');
+            bar.style.background = '#d1fae5'; bar.style.color = '#065f46'; bar.style.borderTop = '2px solid #10b981';
+            bar.innerHTML = `✅ ${name} の経過記録（${date}）を保存しました`;
+            bar.style.display = 'block'; bar.style.opacity = '1';
+            setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => { bar.style.display = 'none'; bar.style.opacity = '1'; }, 500); }, 3000);
+            // 保存後に一覧に戻る
+            showSOAPList();
+        }
+
+        function generateSOAPNote() {
+            const name = document.getElementById('soap-patient').value;
+            const date = document.getElementById('soap-date').value;
+            if (!name) { alert('患者を選択してください'); return; }
+            const s = document.getElementById('soap-s').value.trim();
+            const o = document.getElementById('soap-o').value.trim();
+            const a = document.getElementById('soap-a').value.trim();
+            const p = document.getElementById('soap-p').value.trim();
+
+            let note = `=== 経過記録（SOAP） ===\n`;
+            note += `患者: ${name}  記入日: ${date}\n\n`;
+            if (s) note += `【S：主観的情報】\n${s}\n\n`;
+            if (o) note += `【O：客観的情報】\n${o}\n\n`;
+            if (a) note += `【A：アセスメント】\n${a}\n\n`;
+            if (p) note += `【P：計画】\n${p}\n\n`;
+
+            const outputEl = document.getElementById('soap-output');
+            outputEl.innerText = note;
+            outputEl.style.display = 'block';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(note).then(() => alert('経過記録を出力し、クリップボードにコピーしました！')).catch(() => alert('経過記録を出力しました！'));
+            } else {
+                alert('経過記録を出力しました！');
+            }
+        }
+
+        // Enter/改行キーで次の入力欄に移動
+        document.addEventListener('keydown', (e) => {
+            const el = e.target;
+            // textarea内ではEnterで改行を許可（移動しない）
+            if (el.tagName === 'TEXTAREA') return;
+            // input[type=text] または select で Enter が押された場合
+            if (e.key === 'Enter' && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) {
+                e.preventDefault();
+                // 同じ patient-block 内のフォーカス可能な要素を取得
+                const block = el.closest('.patient-block');
+                if (!block) return;
+                const focusable = Array.from(block.querySelectorAll('input[type="text"]:not([style*="display:none"]):not([style*="display: none"]), select:not([style*="display:none"]):not([style*="display: none"]), textarea'));
+                const idx = focusable.indexOf(el);
+                if (idx >= 0 && idx < focusable.length - 1) {
+                    focusable[idx + 1].focus();
+                }
+            }
+        });
+    </script>
+    <script>
+        // Service Worker 登録（PWA オフライン対応）
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
