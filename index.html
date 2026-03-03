@@ -838,6 +838,95 @@
             color: #a5b4fc;
             border-color: #4338ca;
         }
+
+        /* 疾患検索結果 */
+        .disease-search-results {
+            display: none;
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .disease-search-results h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.8rem;
+            color: #16a34a;
+        }
+
+        .disease-result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: white;
+            border: 1px solid #d1fae5;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .disease-result-item .result-info {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .disease-result-item .result-name {
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+
+        .disease-result-item .result-badge {
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .disease-result-item .result-add-btn {
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .disease-result-item .result-add-btn:hover {
+            background: #15803d;
+        }
+
+        .disease-result-item.already-added {
+            opacity: 0.6;
+        }
+
+        .disease-result-item.already-added .result-add-btn {
+            background: #94a3b8;
+            cursor: default;
+        }
+
+        body.dark-mode .disease-search-results {
+            background: #1e293b;
+            border-color: #475569;
+        }
+
+        body.dark-mode .disease-result-item {
+            background: #334155;
+            border-color: #475569;
+        }
+
+        body.dark-mode .disease-result-item .result-name {
+            color: #93c5fd;
+        }
     </style>
 </head>
 
@@ -1166,15 +1255,19 @@
         <div id="warning-box"></div>
         <div style="margin-bottom: 15px;"><label>実習日</label><input type="date" id="dateInput"></div>
 
-        <div class="disease-search-bar">
+        <div class="disease-search-bar" style="flex-wrap:wrap;">
             <label>🔍 疾患で検索:</label>
-            <select id="diseaseSearchInput" onchange="filterPatientsByDisease()"
-                style="flex:1;padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:0.8rem;">
+            <input type="text" id="diseaseTextSearch" placeholder="疾患名を入力して検索..." oninput="searchPatientsByDisease()"
+                style="flex:2;min-width:120px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:0.8rem;">
+            <select id="diseaseSearchInput" onchange="searchPatientsByDiseaseSelect()"
+                style="flex:1;min-width:100px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;font-size:0.8rem;">
                 <option value="">すべて表示</option>
             </select>
+            <button class="sort-btn" onclick="clearDiseaseSearch()" title="検索をクリア">✕ クリア</button>
             <button class="sort-btn" onclick="sortPatientsByName()" title="名前順に並べ替え">↕ 名前順</button>
             <button class="sort-btn" onclick="sortPatientsByDisease()" title="疾患名順に並べ替え">↕ 疾患名順</button>
         </div>
+        <div class="disease-search-results" id="diseaseSearchResults"></div>
 
         <div id="patientList"></div>
 
@@ -1211,6 +1304,7 @@
         const DB_PREFIX = 'pt_final_v34_';
         const alphabet = (() => { const a = []; const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""); L.forEach(c => a.push(c)); L.forEach(c => a.push("A" + c)); L.forEach(c => a.push("B" + c)); return a; })();
         let vitalChartInstance = null; let scoreChartInstance = null;
+        let diseaseListCounter = 0;
 
         function toggleMenu() { const m = document.getElementById('nav-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -1230,18 +1324,19 @@
             const compares = document.getElementById('masterCompare').value.split('\n').filter(v => v);
 
             document.querySelectorAll('.patient-block').forEach(b => {
-                // === 疾患リストの同期 ===
+                // === 疾患リストの同期（datalist方式） ===
                 const disEl = b.querySelector('.p-disease');
                 const curDis = disEl.value;
                 const curDisSide = b.querySelector('.p-dis-side').value;
-                disEl.innerHTML = '<option value="">選択</option>' + diseases.map(d => `<option value="${d}">${d}</option>`).join('');
-                // 以前の選択値があれば復元（マスターに無くても追加）
-                if (curDis) {
-                    if (![...disEl.options].some(o => o.value === curDis)) {
-                        const opt = document.createElement('option'); opt.value = curDis; opt.textContent = curDis; disEl.appendChild(opt);
+                const dlId = disEl.getAttribute('list');
+                if (dlId) {
+                    const dl = document.getElementById(dlId);
+                    if (dl) {
+                        dl.innerHTML = diseases.map(d => `<option value="${d}">`).join('');
                     }
-                    disEl.value = curDis;
                 }
+                // 以前の値があれば復元
+                if (curDis) disEl.value = curDis;
                 b.querySelector('.p-dis-side').value = curDisSide;
 
                 // === リハメニューの同期 ===
@@ -1507,23 +1602,158 @@
             badge.innerHTML = html;
         }
 
-        // === 疾患で患者ブロックを検索 ===
-        function filterPatientsByDisease() {
+        // === localStorageから全患者データを取得 ===
+        function getAllSavedPatients() {
+            const patients = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(DB_PREFIX + 'full_mem_')) {
+                    try {
+                        const name = key.replace(DB_PREFIX + 'full_mem_', '');
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data && data.p) {
+                            patients.push({
+                                name: name,
+                                disease: data.p.dis || '',
+                                disSide: data.p.disSide || '',
+                                age: data.p.age || '',
+                                sex: data.p.sex || '',
+                                side: data.p.side || ''
+                            });
+                        }
+                    } catch (e) { /* skip */ }
+                }
+            }
+            return patients;
+        }
+
+        // === 画面上にいる患者名を取得 ===
+        function getActivePatientNames() {
+            const names = new Set();
+            document.querySelectorAll('.patient-block .p-name').forEach(el => {
+                if (el.value) names.add(el.value);
+            });
+            return names;
+        }
+
+        // === 検索結果を表示 ===
+        function showSearchResults(results) {
+            const container = document.getElementById('diseaseSearchResults');
+            if (!results.length) {
+                container.innerHTML = '<h4>🔍 検索結果</h4><p style="color:#94a3b8;font-size:0.8rem;text-align:center;">該当する患者が見つかりませんでした</p>';
+                container.style.display = 'block';
+                return;
+            }
+            const activeNames = getActivePatientNames();
+            let html = `<h4>🔍 検索結果（${results.length}件）</h4>`;
+            results.forEach(p => {
+                const isAdded = activeNames.has(p.name);
+                html += `<div class="disease-result-item${isAdded ? ' already-added' : ''}">`;
+                html += `<div class="result-info">`;
+                html += `<span class="result-name">${p.name}</span>`;
+                if (p.disease) html += `<span class="result-badge">${p.disease}${p.disSide ? '（' + p.disSide + '）' : ''}</span>`;
+                if (p.age) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${p.age}</span>`;
+                if (p.sex) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${p.sex}</span>`;
+                if (p.side) html += `<span class="result-badge" style="background:#fee2e2;color:#b91c1c;">麻痺側:${p.side}</span>`;
+                html += `</div>`;
+                if (isAdded) {
+                    html += `<span style="font-size:0.7rem;color:#94a3b8;">追加済み</span>`;
+                } else {
+                    html += `<button class="result-add-btn" onclick="addPatientFromSearch('${p.name.replace(/'/g, "\\'")}')">＋ 追加</button>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        // === 検索結果から患者を追加 ===
+        function addPatientFromSearch(name) {
+            addPatientBlock();
+            const b = document.getElementById('patientList').lastElementChild;
+            b.querySelector('.p-name').value = name;
+            syncAndBadge(b.querySelector('.p-name'));
+            // 検索結果を更新（追加済み表示に）
+            const textQ = document.getElementById('diseaseTextSearch').value.trim();
+            const selQ = document.getElementById('diseaseSearchInput').value;
+            if (textQ) searchPatientsByDisease();
+            else if (selQ) searchPatientsByDiseaseSelect();
+            // 追加したブロックにスクロール
+            b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // === 疾患で患者を検索（テキスト入力：部分一致）===
+        function searchPatientsByDisease() {
+            const q = document.getElementById('diseaseTextSearch').value.trim().toLowerCase();
+            document.getElementById('diseaseSearchInput').value = '';
+            // 画面上のブロックもフィルタ
+            document.querySelectorAll('.patient-block').forEach(b => {
+                const dis = b.querySelector('.p-disease').value.toLowerCase();
+                if (!q) { b.style.display = ''; return; }
+                b.style.display = dis.includes(q) ? '' : 'none';
+            });
+            // localStorageから検索
+            if (!q) {
+                document.getElementById('diseaseSearchResults').style.display = 'none';
+                return;
+            }
+            const allPatients = getAllSavedPatients();
+            const results = allPatients.filter(p => p.disease.toLowerCase().includes(q));
+            showSearchResults(results);
+        }
+
+        // === 疾患で患者を検索（ドロップダウン：完全一致）===
+        function searchPatientsByDiseaseSelect() {
             const q = document.getElementById('diseaseSearchInput').value;
+            document.getElementById('diseaseTextSearch').value = '';
+            // 画面上のブロックもフィルタ
             document.querySelectorAll('.patient-block').forEach(b => {
                 const dis = b.querySelector('.p-disease').value;
                 if (!q) { b.style.display = ''; return; }
                 b.style.display = (dis === q) ? '' : 'none';
+            });
+            // localStorageから検索
+            if (!q) {
+                document.getElementById('diseaseSearchResults').style.display = 'none';
+                return;
+            }
+            const allPatients = getAllSavedPatients();
+            const results = allPatients.filter(p => p.disease === q);
+            showSearchResults(results);
+        }
+
+        // === 疾患検索クリア ===
+        function clearDiseaseSearch() {
+            document.getElementById('diseaseTextSearch').value = '';
+            document.getElementById('diseaseSearchInput').value = '';
+            document.getElementById('diseaseSearchResults').style.display = 'none';
+            document.querySelectorAll('.patient-block').forEach(b => {
+                b.style.display = '';
             });
         }
 
         function updateDiseaseSearchOptions() {
             const sel = document.getElementById('diseaseSearchInput');
             const cur = sel.value;
-            const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
-            sel.innerHTML = '<option value="">すべて表示</option>' + diseases.map(d => `<option value="${d}">${d}</option>`).join('');
-            if (diseases.includes(cur)) sel.value = cur;
-            else { sel.value = ''; filterPatientsByDisease(); }
+            const masterDiseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
+            // localStorageの保存済み患者の疾患も収集
+            const savedDiseases = new Set();
+            getAllSavedPatients().forEach(p => {
+                if (p.disease) savedDiseases.add(p.disease);
+            });
+            // 画面上の患者ブロックの疾患も収集
+            document.querySelectorAll('.patient-block .p-disease').forEach(el => {
+                if (el.value) savedDiseases.add(el.value);
+            });
+            // 全疾患を統合（重複排除）
+            const allDiseases = [...new Set([...masterDiseases, ...savedDiseases])];
+            sel.innerHTML = '<option value="">すべて表示</option>' + allDiseases.map(d => {
+                // 保存済み患者数をカウント
+                const count = getAllSavedPatients().filter(p => p.disease === d).length;
+                return `<option value="${d}">${d}${count > 0 ? ' (' + count + '人)' : ''}</option>`;
+            }).join('');
+            if (allDiseases.includes(cur)) sel.value = cur;
+            else { sel.value = ''; }
         }
 
         // === リハ項目追加 ===
@@ -1601,6 +1831,36 @@
             row.remove();
         }
 
+        // === 疾患追加 ===
+        function addDiseaseToSelect(btn) {
+            const name = prompt('追加する疾患名を入力:');
+            if (!name || !name.trim()) return;
+            const disName = name.trim();
+            // マスター設定に追加
+            const masterEl = document.getElementById('masterDiseases');
+            const existing = masterEl.value.split('\n').filter(v => v);
+            if (!existing.includes(disName)) {
+                existing.push(disName);
+                masterEl.value = existing.join('\n');
+                saveConfig();
+            }
+            // 現在のブロックの疾患inputに設定
+            const block = btn.closest('.patient-block');
+            const disEl = block.querySelector('.p-disease');
+            disEl.value = disName;
+            updateInfoBadge(disEl);
+            // 全ブロックのdatalistを更新
+            const diseases = masterEl.value.split('\n').filter(v => v);
+            document.querySelectorAll('.patient-block .p-disease').forEach(el => {
+                const dlId = el.getAttribute('list');
+                if (dlId) {
+                    const dl = document.getElementById(dlId);
+                    if (dl) dl.innerHTML = diseases.map(d => `<option value="${d}">`).join('');
+                }
+            });
+            updateDiseaseSearchOptions();
+        }
+
         function addPatientBlock() {
             const list = document.getElementById('patientList');
             const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
@@ -1613,12 +1873,15 @@
             block.innerHTML = `
             <button class="del-btn" onclick="this.parentElement.remove()">削除</button>
             <div class="row">
-                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
-                <div class="col"><label>氏名</label><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"><select class="p-name" onchange="syncAndBadge(this)"><option value="休憩時間">☕ 休憩時間</option>${alphabet.map(n => `<option value="${n}さん">${n}さん</option>`).join('')}</select><button class="menu-btn" style="width:30px;height:30px;font-size:0.8rem" onclick="openChartModal(this.closest('.patient-block').querySelector('.p-name').value)">📈</button><label class="case-toggle"><input type="checkbox" class="case-chk" onchange="toggleCasePatient(this)"><span class="case-label">症例</span></label><button class="collapse-btn" onclick="toggleCollapse(this)">▲ たたむ</button><span class="patient-info-badge"></span></div></div>
+                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}"${i + 1 === 9 ? ' selected' : ''}>${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
+                <div style="display:flex;gap:4px;align-items:flex-end;flex-wrap:wrap;"><button class="menu-btn" style="width:30px;height:30px;font-size:0.8rem" onclick="openChartModal(this.closest('.patient-block').querySelector('.p-name').value)">📈</button><label class="case-toggle"><input type="checkbox" class="case-chk" onchange="toggleCasePatient(this)"><span class="case-label">症例</span></label><button class="collapse-btn" onclick="toggleCollapse(this)">▲ たたむ</button></div>
+            </div>
+            <div class="row">
+                <div class="col"><label>氏名</label><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"><select class="p-name" onchange="syncAndBadge(this)"><option value="休憩時間">☕ 休憩時間</option>${alphabet.map(n => `<option value="${n}さん">${n}さん</option>`).join('')}</select><span class="patient-info-badge"></span></div></div>
                 <div style="width:75px;"><label>年齢</label><select class="p-age" onchange="updateInfoBadge(this)">${Array.from({ length: 9 }, (_, i) => `<option value="${(i + 1) * 10}代">${(i + 1) * 10}代</option>`).join('')}</select></div>
                 <div style="width:65px;"><label>性別</label><select class="p-sex" onchange="updateInfoBadge(this)">${sexOpts}</select></div>
                 <div style="width:70px;"><label>麻痺側</label><select class="p-side" onchange="highlight(this)"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div>
-                <div class="col"><label>疾患</label><div style="display:flex;gap:4px"><select class="p-disease" onchange="updateInfoBadge(this)"><option value="">選択</option>${diseases.map(d => `<option value="${d}">${d}</option>`).join('')}</select><select class="p-dis-side" style="width:55px;"><option value="">-</option><option value="右">右</option><option value="左">左</option></select></div></div>
+                <div class="col"><label>疾患</label><div style="display:flex;gap:4px;align-items:center;"><input type="text" class="p-disease" list="disease-dl-${diseaseListCounter}" placeholder="検索/選択..." onchange="updateInfoBadge(this)" oninput="updateInfoBadge(this)" style="min-width:100px;"><datalist id="disease-dl-${diseaseListCounter}">${diseases.map(d => `<option value="${d}">`).join('')}</datalist><select class="p-dis-side" style="width:55px;"><option value="">-</option><option value="右">右</option><option value="左">左</option></select><button class="section-reset-btn" onclick="addDiseaseToSelect(this)" title="疾患を追加" style="padding:4px 8px;font-size:0.7rem;">＋</button></div></div>
             </div>
             <div class="block-content">
             <div class="section-header"><label>🩺 バイタル</label><button class="section-reset-btn" onclick="resetVitals(this)">リセット</button></div>
@@ -1653,6 +1916,7 @@
                 block.classList.add('break-block');
             }
             list.appendChild(block);
+            diseaseListCounter++;
         }
 
         function sortR(el) { const b = el.closest('.rehab-list-body'); const rows = Array.from(b.children); rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1); rows.forEach(r => { r.classList.toggle('checked-row', r.querySelector('input').checked); b.appendChild(r); }); }
@@ -1685,21 +1949,14 @@
             if (p.sex) b.querySelector('.p-sex').value = p.sex;
             if (p.side) { b.querySelector('.p-side').value = p.side; highlight(b.querySelector('.p-side')); }
             if (p.dis) {
-                const diseaseEl = b.querySelector('.p-disease');
-                // 選択肢にない場合はoptionを追加
-                if (![...diseaseEl.options].some(o => o.value === p.dis)) {
-                    const opt = document.createElement('option'); opt.value = p.dis; opt.textContent = p.dis; diseaseEl.appendChild(opt);
-                }
-                diseaseEl.value = p.dis;
+                b.querySelector('.p-disease').value = p.dis;
             }
             if (p.disSide) b.querySelector('.p-dis-side').value = p.disSide;
             if (p.hbS !== undefined) { b.querySelector('.p-hb').value = p.hbS; tgD(b.querySelector('.p-hb')); }
             if (p.hbD !== undefined) b.querySelector('.p-hb-d').value = p.hbD;
             if (p.dsS !== undefined) { b.querySelector('.p-ds').value = p.dsS; tgD(b.querySelector('.p-ds')); }
             if (p.dsD !== undefined) b.querySelector('.p-ds-d').value = p.dsD;
-            // 時間の復元
-            if (p.h) b.querySelector('.p-h').value = p.h;
-            if (p.m !== undefined) b.querySelector('.p-m').value = p.m;
+            // 時間は復元しない（デフォルト9:00のまま）
             // 学び・備考を復元
             if (p.ins !== undefined) b.querySelector('.p-ins').value = p.ins;
             if (p.rem !== undefined) b.querySelector('.p-rem').value = p.rem;
@@ -1765,7 +2022,16 @@
 
             document.querySelectorAll('.patient-block').forEach(b => {
                 const name = b.querySelector('.p-name').value; const h = b.querySelector('.p-h').value, m = b.querySelector('.p-m').value;
-                const curT = parseInt(h) * 60 + parseInt(m); const age = b.querySelector('.p-age').value;
+                const curT = parseInt(h) * 60 + parseInt(m);
+
+                // 休憩時間の場合は時間のみ出力してスキップ
+                if (name === '休憩時間') {
+                    note += `【${h}:${m}】 ☕ 休憩時間\n\n`;
+                    lastT = curT;
+                    return;
+                }
+
+                const age = b.querySelector('.p-age').value;
                 const sex = b.querySelector('.p-sex').value;
                 const ins = b.querySelector('.p-ins').value.trim(); const side = b.querySelector('.p-side').value; const dis = b.querySelector('.p-disease').value;
                 const disSide = b.querySelector('.p-dis-side').value;
