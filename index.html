@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PT実習ノート">
-    <link rel="apple-touch-icon" href="./icon-192.svg">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -760,7 +760,9 @@
 
         /* 患者ブロック折りたたみ */
         .patient-block .block-content {
-            transition: max-height 0.3s ease, opacity 0.2s ease;
+            max-height: 3000px;
+            opacity: 1;
+            transition: max-height 0.35s ease, opacity 0.2s ease;
             overflow: hidden;
         }
 
@@ -768,6 +770,7 @@
             max-height: 0 !important;
             opacity: 0;
             padding: 0;
+            overflow: hidden;
         }
 
         .patient-block .collapse-btn {
@@ -1606,7 +1609,14 @@
                 if (d.ins) b.querySelector('.p-ins').value = d.ins;
                 if (d.rem) b.querySelector('.p-rem').value = d.rem;
                 if (d.soapP) b.querySelector('.p-soap-p').value = d.soapP;
-                if (d.collapsed) { b.classList.add('collapsed'); const cb = b.querySelector('.collapse-btn'); if (cb) cb.textContent = '▼ 展開'; }
+                const cb = b.querySelector('.collapse-btn');
+                if (d.collapsed) {
+                    b.classList.add('collapsed');
+                    if (cb) cb.textContent = '▼ 展開';
+                } else {
+                    b.classList.remove('collapsed');
+                    if (cb) cb.textContent = '▲ たたむ';
+                }
                 loadPatientMemo(b);
                 updateInfoBadge(b.querySelector('.p-name'));
             });

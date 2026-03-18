@@ -1,18 +1,29 @@
-const CACHE_NAME = 'pt-note-v1';
-const ASSETS_TO_CACHE = [
-    './',
-    './02.html',
-    './manifest.json',
-    './icon-192.svg',
-    './icon-512.svg',
+const CACHE_NAME = 'pt-note-v4';
+const CORE_ASSETS = [
+    '/02/',
+    '/02/index.html',
+    '/02/manifest.json',
+    '/02/icon-192.png',
+    '/02/icon-512.png'
+];
+const CDN_ASSETS = [
     'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 
 // インストール時にアセットをキャッシュ
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(ASSETS_TO_CACHE);
+        caches.open(CACHE_NAME).then(async cache => {
+            // コアアセットは必ずキャッシュ
+            await cache.addAll(CORE_ASSETS);
+            // CDNアセットは失敗しても無視
+            await Promise.allSettled(
+                CDN_ASSETS.map(url =>
+                    fetch(url).then(res => {
+                        if (res && res.status === 200) cache.put(url, res);
+                    }).catch(() => { })
+                )
+            );
         })
     );
     self.skipWaiting();
@@ -21,11 +32,9 @@ self.addEventListener('install', event => {
 // アクティベート時に古いキャッシュを削除
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(
-                keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-            );
-        })
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        )
     );
     self.clients.claim();
 });
@@ -36,22 +45,24 @@ self.addEventListener('fetch', event => {
         caches.match(event.request).then(cached => {
             if (cached) {
                 // キャッシュがあれば返しつつ、バックグラウンドで更新
-                const fetchPromise = fetch(event.request).then(response => {
+                fetch(event.request).then(response => {
                     if (response && response.status === 200) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
                     }
-                    return response;
                 }).catch(() => { });
                 return cached;
             }
             // キャッシュがなければネットワークから取得してキャッシュ
             return fetch(event.request).then(response => {
                 if (response && response.status === 200) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
                 }
                 return response;
+            }).catch(() => {
+                // オフラインでコアページを要求している場合はindex.htmlを返す
+                if (event.request.mode === 'navigate') {
+                    return caches.match('/02/index.html');
+                }
             });
         })
     );
