@@ -971,15 +971,24 @@
                     検査結果</button>
             </div>
             <div id="vital-chart-area">
-                <div id="vital-filter" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:8px;background:#f8fafc;border-radius:6px;">
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreS" checked onchange="renderVitalChart()"> 前)BP上</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreD" checked onchange="renderVitalChart()"> 前)BP下</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPrePr" checked onchange="renderVitalChart()"> 前)脈拍</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreSp" checked onchange="renderVitalChart()"> 前)SpO2</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostS" checked onchange="renderVitalChart()"> 後)BP上</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostD" checked onchange="renderVitalChart()"> 後)BP下</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostPr" checked onchange="renderVitalChart()"> 後)脈拍</label>
-                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostSp" checked onchange="renderVitalChart()"> 後)SpO2</label>
+                <div id="vital-filter"
+                    style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:8px;background:#f8fafc;border-radius:6px;">
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreS" checked
+                            onchange="renderVitalChart()"> 前)BP上</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreD" checked
+                            onchange="renderVitalChart()"> 前)BP下</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPrePr" checked
+                            onchange="renderVitalChart()"> 前)脈拍</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPreSp" checked
+                            onchange="renderVitalChart()"> 前)SpO2</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostS" checked
+                            onchange="renderVitalChart()"> 後)BP上</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostD" checked
+                            onchange="renderVitalChart()"> 後)BP下</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostPr" checked
+                            onchange="renderVitalChart()"> 後)脈拍</label>
+                    <label style="font-size:0.75rem;"><input type="checkbox" class="vital-chk" value="vPostSp" checked
+                            onchange="renderVitalChart()"> 後)SpO2</label>
                 </div>
                 <canvas id="vitalChart"></canvas>
             </div>
@@ -1298,9 +1307,11 @@
             患者を追加</button>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
             <button id="btn-mode-full" onclick="setNoteMode('full')"
-                style="flex:1;background:var(--primary);color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">📋 全文ノート</button>
+                style="flex:1;background:var(--primary);color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">📋
+                全文ノート</button>
             <button id="btn-mode-ins" onclick="setNoteMode('ins')"
-                style="flex:1;background:#94a3b8;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">💡 学び・アセスメントのみ</button>
+                style="flex:1;background:#94a3b8;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">💡
+                学び・アセスメントのみ</button>
         </div>
         <button onclick="generateNote()"
             style="background:var(--primary); color:white; border:none; padding:15px; width:100%; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold;">ノート生成
@@ -1318,7 +1329,8 @@
         <div id="ins-output"
             style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:20px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem;">
         </div>
-        <button id="copy-ins-btn" class="note-copy-btn" style="display:none;background:#8b5cf6;" onclick="copyInsBody()">📋
+        <button id="copy-ins-btn" class="note-copy-btn" style="display:none;background:#8b5cf6;"
+            onclick="copyInsBody()">📋
             学び・アセスメントをコピー（ヘッダー除外）</button>
 
         <div style="margin-top: 30px; padding: 15px; background: #e2e8f0; border-radius: 8px;">
@@ -1872,7 +1884,7 @@
             const body = btn.closest('.compare-container').querySelector('.compare-body');
             body.insertAdjacentHTML('beforeend', buildCompRowHtml(input.trim()));
             const block = btn.closest('.patient-block');
-            if (block) {/* no-op */}
+            if (block) {/* no-op */ }
         }
 
         // === 検査項目名変更 ===
@@ -2874,7 +2886,7 @@
             document.getElementById('ins-output').style.display = 'block';
             document.getElementById('copy-ins-btn').style.display = 'inline-block';
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(note).catch(() => {});
+                navigator.clipboard.writeText(note).catch(() => { });
             }
         }
 
