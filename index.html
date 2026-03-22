@@ -11,7 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PT実習ノート">
     <link rel="apple-touch-icon" href="./icon-192.png">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self';">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" integrity="sha256-Lye89HGy1p3XhJT24hcvsoRw64Q4IOL5a7hdOflhjTA=" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -945,6 +946,45 @@
 
 <body>
 
+    <!-- 同意モーダル -->
+    <div id="consent-modal" class="modal" style="display:none;z-index:9999;">
+        <div class="modal-body" style="max-width:520px;max-height:90vh;">
+            <h2 style="color:var(--primary);margin-top:0;">📋 ご利用前の確認</h2>
+            <p style="font-size:0.9rem;line-height:1.7;color:#334155;">
+                このアプリを使用する前に、以下の事項をご確認のうえ同意してください。
+            </p>
+            <div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:8px;padding:14px;margin-bottom:14px;">
+                <p style="font-weight:bold;color:#b91c1c;margin:0 0 8px 0;font-size:0.9rem;">⚠️ 個人情報の取り扱いについて</p>
+                <ul style="margin:0;padding-left:18px;font-size:0.85rem;color:#374151;line-height:1.8;">
+                    <li>本アプリは実習中に知り得た患者情報を記録するツールです。</li>
+                    <li>入力された情報はお使いの端末内（ブラウザのlocalStorage）にのみ保存されます。外部サーバーへの送信は一切行いません。</li>
+                    <li>患者氏名は匿名（アルファベット）で記録し、個人が特定されないよう配慮してください。</li>
+                    <li>実習終了後は「全リセット」機能でデータを削除してください。</li>
+                    <li>端末の紛失・第三者へのアクセス防止のため、適切に管理してください。</li>
+                </ul>
+            </div>
+            <div style="background:#eff6ff;border:2px solid #93c5fd;border-radius:8px;padding:14px;margin-bottom:18px;">
+                <p style="font-weight:bold;color:#1e40af;margin:0 0 8px 0;font-size:0.9rem;">🔒 アプリの取り扱いについて</p>
+                <ul style="margin:0;padding-left:18px;font-size:0.85rem;color:#374151;line-height:1.8;">
+                    <li>本アプリのURL・ファイルを第三者やSNS等に公開・共有しないでください。</li>
+                    <li>患者情報が含まれたバックアップファイル（JSON）は厳重に管理し、不要になったら削除してください。</li>
+                </ul>
+            </div>
+            <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
+                <input type="checkbox" id="consent-chk1" onchange="checkConsent()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
+                個人情報の取り扱いについて理解し、適切に管理することに同意します
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
+                <input type="checkbox" id="consent-chk2" onchange="checkConsent()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
+                本アプリを第三者・SNS等に公開・共有しないことに同意します
+            </label>
+            <button id="consent-agree-btn" disabled onclick="agreeConsent()"
+                style="width:100%;padding:14px;background:#94a3b8;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:not-allowed;transition:all 0.2s;">
+                同意して利用を開始する
+            </button>
+        </div>
+    </div>
+
     <button class="dark-toggle" onclick="toggleDarkMode()" title="ダークモード切替">🌙</button>
 
     <div class="menu-container">
@@ -1534,11 +1574,11 @@
                 document.querySelectorAll('.patient-block').forEach(b => {
                     const name = b.querySelector('.p-name').value;
                     if (name === '休憩時間') {
-                        draft.push({ isBreak: true, h: b.querySelector('.p-h').value, m: b.querySelector('.p-m').value });
+                        draft.push({ isBreak: true, sh: b.querySelector('.p-sh').value, sm: b.querySelector('.p-sm').value, eh: b.querySelector('.p-eh').value, em: b.querySelector('.p-em').value });
                         return;
                     }
                     const data = {
-                        name, h: b.querySelector('.p-h').value, m: b.querySelector('.p-m').value,
+                        name, sh: b.querySelector('.p-sh').value, sm: b.querySelector('.p-sm').value, eh: b.querySelector('.p-eh').value, em: b.querySelector('.p-em').value,
                         age: b.querySelector('.p-age').value, sex: b.querySelector('.p-sex').value,
                         disease: b.querySelector('.p-disease').value,
                         disSide: b.querySelector('.p-dis-side').value,
@@ -1583,14 +1623,18 @@
                 if (d.isBreak) {
                     b.querySelector('.p-name').value = '休憩時間';
                     b.classList.add('break-block');
-                    b.querySelector('.p-h').value = d.h || '1';
-                    b.querySelector('.p-m').value = d.m || '00';
+                    b.querySelector('.p-sh').value = d.sh || '9';
+                    b.querySelector('.p-sm').value = d.sm || '00';
+                    b.querySelector('.p-eh').value = d.eh || '10';
+                    b.querySelector('.p-em').value = d.em || '00';
                     return;
                 }
                 b.classList.remove('break-block');
                 b.querySelector('.p-name').value = d.name;
-                b.querySelector('.p-h').value = d.h || '1';
-                b.querySelector('.p-m').value = d.m || '00';
+                b.querySelector('.p-sh').value = d.sh || '9';
+                b.querySelector('.p-sm').value = d.sm || '00';
+                b.querySelector('.p-eh').value = d.eh || '10';
+                b.querySelector('.p-em').value = d.em || '00';
                 b.querySelector('.p-age').value = d.age || '10代';
                 b.querySelector('.p-sex').value = d.sex || '';
                 b.querySelector('.p-disease').value = d.disease || '';
@@ -1694,9 +1738,9 @@
             const sex = b.querySelector('.p-sex').value;
             const dis = b.querySelector('.p-disease').value;
             let html = '';
-            if (age) html += `<span class="badge-item">${age}</span>`;
-            if (sex) html += `<span class="badge-item">${sex}</span>`;
-            if (dis) html += `<span class="badge-item badge-disease">${dis}</span>`;
+            if (age) html += `<span class="badge-item">${escHtml(age)}</span>`;
+            if (sex) html += `<span class="badge-item">${escHtml(sex)}</span>`;
+            if (dis) html += `<span class="badge-item badge-disease">${escHtml(dis)}</span>`;
             badge.innerHTML = html;
         }
 
@@ -1748,11 +1792,11 @@
                 const isAdded = activeNames.has(p.name);
                 html += `<div class="disease-result-item${isAdded ? ' already-added' : ''}">`;
                 html += `<div class="result-info">`;
-                html += `<span class="result-name">${p.name}</span>`;
-                if (p.disease) html += `<span class="result-badge">${p.disease}${p.disSide ? '（' + p.disSide + '）' : ''}</span>`;
-                if (p.age) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${p.age}</span>`;
-                if (p.sex) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${p.sex}</span>`;
-                if (p.side) html += `<span class="result-badge" style="background:#fee2e2;color:#b91c1c;">麻痺側:${p.side}</span>`;
+                html += `<span class="result-name">${escHtml(p.name)}</span>`;
+                if (p.disease) html += `<span class="result-badge">${escHtml(p.disease)}${p.disSide ? '（' + escHtml(p.disSide) + '）' : ''}</span>`;
+                if (p.age) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${escHtml(p.age)}</span>`;
+                if (p.sex) html += `<span class="result-badge" style="background:#e0e7ff;color:#3730a3;">${escHtml(p.sex)}</span>`;
+                if (p.side) html += `<span class="result-badge" style="background:#fee2e2;color:#b91c1c;">麻痺側:${escHtml(p.side)}</span>`;
                 html += `</div>`;
                 if (isAdded) {
                     html += `<span style="font-size:0.7rem;color:#94a3b8;">追加済み</span>`;
@@ -1970,7 +2014,7 @@
             block.innerHTML = `
             <button class="del-btn" onclick="this.parentElement.remove()">削除</button>
             <div class="row">
-                <div style="width:140px;"><label>時間</label><div style="display:flex;gap:4px"><select class="p-h">${Array.from({ length: 24 }, (_, i) => `<option value="${i + 1}"${i + 1 === 9 ? ' selected' : ''}>${i + 1}</option>`).join('')}</select>:<select class="p-m">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
+                <div style="min-width:220px;"><label>時間</label><div style="display:flex;gap:2px;align-items:center;flex-wrap:nowrap;"><select class="p-sh">${Array.from({ length: 24 }, (_, i) => `<option value="${i}"${i === 9 ? ' selected' : ''}>${i}</option>`).join('')}</select>:<select class="p-sm">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select><span style="font-size:0.85rem;margin:0 3px;font-weight:bold;">〜</span><select class="p-eh">${Array.from({ length: 24 }, (_, i) => `<option value="${i}"${i === 10 ? ' selected' : ''}>${i}</option>`).join('')}</select>:<select class="p-em">${Array.from({ length: 12 }, (_, i) => `<option value="${(i * 5).toString().padStart(2, '0')}">${(i * 5).toString().padStart(2, '0')}</option>`).join('')}</select></div></div>
                 <div style="display:flex;gap:4px;align-items:flex-end;flex-wrap:wrap;"><button class="menu-btn" style="width:30px;height:30px;font-size:0.8rem" onclick="openChartModal(this.closest('.patient-block').querySelector('.p-name').value)">📈</button><label class="case-toggle"><input type="checkbox" class="case-chk" onchange="toggleCasePatient(this)"><span class="case-label">症例</span></label><button class="collapse-btn" onclick="toggleCollapse(this)">▲ たたむ</button></div>
             </div>
             <div class="row">
@@ -2114,12 +2158,12 @@
             let warnings = []; let lastT = -1; let caseNum = 0;
 
             document.querySelectorAll('.patient-block').forEach(b => {
-                const name = b.querySelector('.p-name').value; const h = b.querySelector('.p-h').value, m = b.querySelector('.p-m').value;
-                const curT = parseInt(h) * 60 + parseInt(m);
+                const name = b.querySelector('.p-name').value; const sh = b.querySelector('.p-sh').value, sm = b.querySelector('.p-sm').value, eh = b.querySelector('.p-eh').value, em = b.querySelector('.p-em').value;
+                const curT = parseInt(sh) * 60 + parseInt(sm);
 
                 // 休憩時間の場合は時間のみ出力してスキップ
                 if (name === '休憩時間') {
-                    note += `【${h}:${m}】 ☕ 休憩時間\n\n`;
+                    note += `【${sh}:${sm}〜${eh}:${em}】 ☕ 休憩時間\n\n`;
                     lastT = curT;
                     return;
                 }
@@ -2170,7 +2214,7 @@
                 }
 
                 localStorage.setItem(DB_PREFIX + 'full_mem_' + name, JSON.stringify({
-                    p: { age, sex, dis, disSide, hbS, hbD, dsS, dsD, h, m, ins, rem },
+                    p: { age, sex, dis, disSide, hbS, hbD, dsS, dsD, sh, sm, eh, em, ins, rem },
                     vitals: {
                         preS: b.querySelector('.v-pre-s').value, preD: b.querySelector('.v-pre-d').value,
                         prePr: b.querySelector('.v-pre-pr').value, preBt: b.querySelector('.v-pre-bt').value, preSp: b.querySelector('.v-pre-sp').value,
@@ -2190,7 +2234,7 @@
                 // ノート出力
                 const fullDis = disSide ? disSide + dis : dis;
                 note += `Case${caseNum}\n`;
-                note += `【${h}:${m}】 ${name}（${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
+                note += `【${sh}:${sm}〜${eh}:${em}】 ${name}（${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
 
                 // バイタル（前後）
                 const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
@@ -2462,10 +2506,10 @@
                 const age = b.querySelector('.p-age').value;
                 const dis = b.querySelector('.p-disease').value;
                 const disSide = b.querySelector('.p-dis-side').value;
-                const h = b.querySelector('.p-h').value;
+                const sh = b.querySelector('.p-sh').value;
                 const ins = b.querySelector('.p-ins').value;
                 const disText = disSide ? disSide + dis : dis;
-                s += `【${name}】${age}${sex ? ' ' + sex : ''}${disText ? ' ' + disText : ''}\n「${h}時より介入。バイタル安定。今日は〜を実施。アセスメントとして${ins.substring(0, 40)}...と考えました。」\n\n`;
+                s += `【${name}】${age}${sex ? ' ' + sex : ''}${disText ? ' ' + disText : ''}\n「${sh}時より介入。バイタル安定。今日は〜を実施。アセスメントとして${ins.substring(0, 40)}...と考えました。」\n\n`;
             });
             document.getElementById('script-cont').innerText = s || "データなし"; document.getElementById('script-modal').style.display = 'block';
         }
@@ -2577,8 +2621,10 @@
                 b.querySelector('.p-sex').value = '';
                 b.querySelector('.p-disease').selectedIndex = 0;
                 b.querySelector('.p-dis-side').value = '';
-                b.querySelector('.p-h').selectedIndex = 0;
-                b.querySelector('.p-m').selectedIndex = 0;
+                b.querySelector('.p-sh').selectedIndex = 9;
+                b.querySelector('.p-sm').selectedIndex = 0;
+                b.querySelector('.p-eh').selectedIndex = 10;
+                b.querySelector('.p-em').selectedIndex = 0;
                 b.querySelector('.p-hb').value = 'なし'; tgD(b.querySelector('.p-hb'));
                 b.querySelector('.p-ds').value = 'なし'; tgD(b.querySelector('.p-ds'));
                 // リハ内容のチェックを外してリセット
@@ -2611,6 +2657,26 @@
             document.getElementById('output').innerText = '';
         }
 
+        // === 同意モーダル ===
+        function checkConsent() {
+            const c1 = document.getElementById('consent-chk1').checked;
+            const c2 = document.getElementById('consent-chk2').checked;
+            const btn = document.getElementById('consent-agree-btn');
+            if (c1 && c2) {
+                btn.disabled = false;
+                btn.style.background = 'var(--primary)';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.background = '#94a3b8';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+        function agreeConsent() {
+            localStorage.setItem(DB_PREFIX + 'consent', '1');
+            document.getElementById('consent-modal').style.display = 'none';
+        }
+
         window.onload = () => {
             loadConfig();
             document.getElementById('dateInput').valueAsDate = new Date();
@@ -2618,6 +2684,10 @@
             if (localStorage.getItem(DB_PREFIX + 'darkMode') === '1') {
                 document.body.classList.add('dark-mode');
                 document.querySelector('.dark-toggle').textContent = '☀️';
+            }
+            // 初回同意確認
+            if (!localStorage.getItem(DB_PREFIX + 'consent')) {
+                document.getElementById('consent-modal').style.display = 'block';
             }
             updateDiseaseSearchOptions();
             // 自動保存ドラフト復元
