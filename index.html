@@ -11,8 +11,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PT実習ノート">
     <link rel="apple-touch-icon" href="./icon-192.png">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self';">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js" integrity="sha256-Lye89HGy1p3XhJT24hcvsoRw64Q4IOL5a7hdOflhjTA=" crossorigin="anonymous"></script>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self';">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"
+        integrity="sha256-Lye89HGy1p3XhJT24hcvsoRw64Q4IOL5a7hdOflhjTA=" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -970,12 +972,16 @@
                     <li>患者情報が含まれたバックアップファイル（JSON）は厳重に管理し、不要になったら削除してください。</li>
                 </ul>
             </div>
-            <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
-                <input type="checkbox" id="consent-chk1" onchange="checkConsent()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
+            <label
+                style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
+                <input type="checkbox" id="consent-chk1" onchange="checkConsent()"
+                    style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
                 個人情報の取り扱いについて理解し、適切に管理することに同意します
             </label>
-            <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
-                <input type="checkbox" id="consent-chk2" onchange="checkConsent()" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
+            <label
+                style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer;font-size:0.9rem;font-weight:bold;color:#374151;">
+                <input type="checkbox" id="consent-chk2" onchange="checkConsent()"
+                    style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
                 本アプリを第三者・SNS等に公開・共有しないことに同意します
             </label>
             <button id="consent-agree-btn" disabled onclick="agreeConsent()"
@@ -1348,14 +1354,7 @@
         <button onclick="addPatientBlock()"
             style="background:#64748b; color:white; border:none; padding:12px; width:100%; border-radius:8px; cursor:pointer; margin-bottom:20px; font-weight:bold;">＋
             患者を追加</button>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <button id="btn-mode-full" onclick="setNoteMode('full')"
-                style="flex:1;background:var(--primary);color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">📋
-                全文ノート</button>
-            <button id="btn-mode-ins" onclick="setNoteMode('ins')"
-                style="flex:1;background:#94a3b8;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">💡
-                学び・アセスメントのみ</button>
-        </div>
+
         <button onclick="generateNote()"
             style="background:var(--primary); color:white; border:none; padding:15px; width:100%; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold;">ノート生成
             ＆ 全項目を記憶</button>
@@ -1902,8 +1901,25 @@
         function addRehabItem(btn) {
             const name = prompt('追加するリハ項目の名前を入力:');
             if (!name || !name.trim()) return;
-            const body = btn.closest('.list-container').querySelector('.rehab-list-body');
-            body.insertAdjacentHTML('beforeend', buildRehabRowHtml(name.trim()));
+            const cleanName = name.trim();
+
+            // マスター設定に追加
+            const masterEl = document.getElementById('masterRehabs');
+            const existing = masterEl.value.split('\n').filter(v => v);
+            if (!existing.includes(cleanName)) {
+                existing.push(cleanName);
+                masterEl.value = existing.join('\n');
+                saveConfig(); // 全ブロックに同期
+            } else {
+                // 既にマスターにある場合は現在のブロックにだけ追加（DOMにない場合のみ）
+                const body = btn.closest('.list-container').querySelector('.rehab-list-body');
+                const existsInDOM = Array.from(body.querySelectorAll('.r-chk')).some(chk => chk.value === cleanName);
+                if (!existsInDOM) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = buildRehabRowHtml(cleanName);
+                    body.appendChild(temp.firstElementChild);
+                }
+            }
         }
 
         // === リハ項目名変更 ===
@@ -1935,10 +1951,25 @@
         function addCompItem(btn) {
             const input = prompt('追加する検査項目を入力 (例: MMT(腸腰筋):段階):');
             if (!input || !input.trim()) return;
-            const body = btn.closest('.compare-container').querySelector('.compare-body');
-            body.insertAdjacentHTML('beforeend', buildCompRowHtml(input.trim()));
-            const block = btn.closest('.patient-block');
-            if (block) {/* no-op */ }
+            const cleanInput = input.trim();
+            const [newName, newUnit] = cleanInput.split(':');
+
+            // マスター設定に追加
+            const masterEl = document.getElementById('masterCompare');
+            const existing = masterEl.value.split('\n').filter(v => v);
+            if (!existing.includes(cleanInput)) {
+                existing.push(cleanInput);
+                masterEl.value = existing.join('\n');
+                saveConfig(); // 全ブロックに同期
+            } else {
+                const body = btn.closest('.compare-container').querySelector('.compare-body');
+                const existsInDOM = Array.from(body.querySelectorAll('.c-chk')).some(chk => chk.value === newName);
+                if (!existsInDOM) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = buildCompRowHtml(cleanInput);
+                    body.appendChild(temp.firstElementChild);
+                }
+            }
         }
 
         // === 検査項目名変更 ===
@@ -2153,7 +2184,7 @@
         }
 
         function generateNote() {
-            if (currentNoteMode === 'ins') { generateInsNote(); return; }
+            generateInsNote(false);
             const date = document.getElementById('dateInput').value; let note = `理学療法実習 デイリーノート (${date})\n\n`;
             let warnings = []; let lastT = -1; let caseNum = 0;
 
@@ -2612,49 +2643,25 @@
         }
 
         function clearAllInputs() {
-            if (!confirm('すべての入力項目をクリアしますか？\n（記憶済みのデータには影響しません）')) return;
-            document.querySelectorAll('.patient-block').forEach(b => {
-                // テキスト入力・テキストエリアをクリア
-                b.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
-                // セレクトをデフォルトに
-                b.querySelector('.p-age').selectedIndex = 0;
-                b.querySelector('.p-sex').value = '';
-                b.querySelector('.p-disease').selectedIndex = 0;
-                b.querySelector('.p-dis-side').value = '';
-                b.querySelector('.p-sh').selectedIndex = 9;
-                b.querySelector('.p-sm').selectedIndex = 0;
-                b.querySelector('.p-eh').selectedIndex = 10;
-                b.querySelector('.p-em').selectedIndex = 0;
-                b.querySelector('.p-hb').value = 'なし'; tgD(b.querySelector('.p-hb'));
-                b.querySelector('.p-ds').value = 'なし'; tgD(b.querySelector('.p-ds'));
-                // リハ内容のチェックを外してリセット
-                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
-                    row.querySelector('.r-chk').checked = false;
-                    row.classList.remove('checked-row');
-                    row.querySelector('.r-min').value = '';
-                    row.querySelector('.r-sec').value = '';
-                    row.querySelector('.r-c').selectedIndex = 0;
-                    row.querySelector('.r-s').selectedIndex = 0;
-                    if (row.querySelector('.r-m')) row.querySelector('.r-m').value = '';
-                    row.querySelector('.r-nrs').selectedIndex = 0;
-                    row.querySelector('.r-bg').selectedIndex = 0;
-                });
-                // 評価項目のチェックを外してリセット
-                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
-                    const chk = row.querySelector('.c-chk');
-                    if (chk) {
-                        chk.checked = false;
-                        const sideEl = row.querySelector('.c-side');
-                        if (sideEl) { sideEl.value = 'lr'; toggleCompSide(sideEl); }
-                        if (row.querySelector('.c-r')) row.querySelector('.c-r').value = '';
-                        if (row.querySelector('.c-l')) row.querySelector('.c-l').value = '';
-                        if (row.querySelector('.c-val')) row.querySelector('.c-val').value = '';
-                    }
-                });
-            });
+            if (!confirm('すべての入力項目をクリアし、初期状態（休憩時間のみ）に戻しますか？\n（記憶済みのデータには影響しません）')) return;
+
+            // 全ての患者ブロックを削除
+            const list = document.getElementById('patientList');
+            list.innerHTML = '';
+
+            // 新しく一つだけ追加し、休憩時間にする
+            addPatientBlock();
+            const b = list.lastElementChild;
+            b.querySelector('.p-name').value = '休憩時間';
+            b.classList.add('break-block');
+
             // 出力エリアも非表示に
             document.getElementById('output').style.display = 'none';
             document.getElementById('output').innerText = '';
+            document.getElementById('ins-output').style.display = 'none';
+            document.getElementById('ins-output').innerText = '';
+            document.getElementById('copy-note-btn').style.display = 'none';
+            document.getElementById('copy-ins-btn').style.display = 'none';
         }
 
         // === 同意モーダル ===
@@ -2930,23 +2937,10 @@
             }
         }
 
-        // === ノートモード切り替え ===
-        let currentNoteMode = 'full';
-        function setNoteMode(mode) {
-            currentNoteMode = mode;
-            const btnFull = document.getElementById('btn-mode-full');
-            const btnIns = document.getElementById('btn-mode-ins');
-            if (mode === 'full') {
-                btnFull.style.background = 'var(--primary)';
-                btnIns.style.background = '#94a3b8';
-            } else {
-                btnFull.style.background = '#94a3b8';
-                btnIns.style.background = '#8b5cf6';
-            }
-        }
+
 
         // === 学び・アセスメントのみ出力 ===
-        function generateInsNote() {
+        function generateInsNote(autoCopy = true) {
             const date = document.getElementById('dateInput').value;
             let note = `学び・アセスメント (${date})\n\n`;
             let caseNum = 0;
@@ -2965,7 +2959,7 @@
             document.getElementById('ins-output').innerText = note;
             document.getElementById('ins-output').style.display = 'block';
             document.getElementById('copy-ins-btn').style.display = 'inline-block';
-            if (navigator.clipboard && navigator.clipboard.writeText) {
+            if (autoCopy && navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(note).catch(() => { });
             }
         }
