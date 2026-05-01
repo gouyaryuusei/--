@@ -1247,7 +1247,7 @@
                     ノート出力</button>
                 <button onclick="closeModal('assess-modal')" style="background:#64748b;color:white;">閉じる</button>
             </div>
-            <div id="assess-output"
+            <div id="assess-output" contenteditable="true"
                 style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:12px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
             </div>
         </div>
@@ -1280,7 +1280,7 @@
                 <button id="soap-export-all-btn" onclick="exportAllSOAP()"
                     style="display:none;margin-top:8px;padding:10px;width:100%;background:var(--success);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.9rem;">📄
                     全記録を出力＆コピー</button>
-                <div id="soap-all-output"
+                <div id="soap-all-output" contenteditable="true"
                     style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:8px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
                 </div>
             </div>
@@ -1317,7 +1317,7 @@
                         ノート出力</button>
                     <button onclick="showSOAPList()" style="background:#64748b;color:white;">一覧に戻る</button>
                 </div>
-                <div id="soap-output"
+                <div id="soap-output" contenteditable="true"
                     style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:12px; white-space:pre-wrap; font-family:monospace; font-size:0.8rem;">
                 </div>
             </div>
@@ -1362,13 +1362,13 @@
             style="background:#f59e0b; color:white; border:none; padding:12px; width:100%; border-radius:8px; cursor:pointer; font-size:0.95rem; font-weight:bold; margin-top:8px;">🗑️
             すべての入力をクリア</button>
 
-        <div id="output"
+        <div id="output" contenteditable="true"
             style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:20px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem;">
         </div>
         <button id="copy-note-btn" class="note-copy-btn" style="display:none;" onclick="copyNoteBody()">📋
             ノートをコピー（ヘッダー除外）</button>
 
-        <div id="ins-output"
+        <div id="ins-output" contenteditable="true"
             style="display:none; background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; margin-top:20px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem;">
         </div>
         <button id="copy-ins-btn" class="note-copy-btn" style="display:none;background:#8b5cf6;"
@@ -2050,7 +2050,7 @@
             </div>
             <div class="row">
                 <div class="col"><label>氏名</label><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"><select class="p-name" onchange="syncAndBadge(this)"><option value="休憩時間">☕ 休憩時間</option>${alphabet.map(n => `<option value="${n}さん">${n}さん</option>`).join('')}</select><span class="patient-info-badge"></span><span class="patient-memo-display"></span></div></div>
-                <div style="width:75px;"><label>年齢</label><select class="p-age" onchange="updateInfoBadge(this)">${Array.from({ length: 9 }, (_, i) => `<option value="${(i + 1) * 10}代">${(i + 1) * 10}代</option>`).join('')}</select></div>
+                <div style="width:75px;"><label>年齢</label><select class="p-age" onchange="updateInfoBadge(this)"><option value="年齢不明">年齢不明</option>${Array.from({ length: 9 }, (_, i) => `<option value="${(i + 1) * 10}代">${(i + 1) * 10}代</option>`).join('')}</select></div>
                 <div style="width:65px;"><label>性別</label><select class="p-sex" onchange="updateInfoBadge(this)">${sexOpts}</select></div>
                 <div class="col"><label>疾患</label><div style="display:flex;gap:4px;align-items:center;"><input type="text" class="p-disease" list="disease-dl-${diseaseListCounter}" placeholder="検索/選択..." onchange="updateInfoBadge(this)" oninput="updateInfoBadge(this)" style="min-width:100px;"><datalist id="disease-dl-${diseaseListCounter}">${diseases.map(d => `<option value="${d}">`).join('')}</datalist><select class="p-dis-side" style="width:55px;"><option value="">-</option><option value="右">右</option><option value="左">左</option><option value="両">両</option></select><button class="section-reset-btn" onclick="addDiseaseToSelect(this)" title="疾患を追加" style="padding:4px 8px;font-size:0.7rem;">＋</button></div></div>
             </div>
@@ -2126,59 +2126,6 @@
                 b.querySelector('.p-disease').value = p.dis;
             }
             if (p.disSide) b.querySelector('.p-dis-side').value = p.disSide;
-            if (p.hbS !== undefined) { b.querySelector('.p-hb').value = p.hbS; tgD(b.querySelector('.p-hb')); }
-            if (p.hbD !== undefined) b.querySelector('.p-hb-d').value = p.hbD;
-            if (p.dsS !== undefined) { b.querySelector('.p-ds').value = p.dsS; tgD(b.querySelector('.p-ds')); }
-            if (p.dsD !== undefined) b.querySelector('.p-ds-d').value = p.dsD;
-            // 時間は復元しない（デフォルト9:00のまま）
-            // 学び・備考を復元
-            if (p.ins !== undefined) b.querySelector('.p-ins').value = p.ins;
-            if (p.rem !== undefined) b.querySelector('.p-rem').value = p.rem;
-
-            // バイタル（前後）の復元
-            if (data.vitals) {
-                const v = data.vitals;
-                if (v.preS) b.querySelector('.v-pre-s').value = v.preS;
-                if (v.preD) b.querySelector('.v-pre-d').value = v.preD;
-                if (v.prePr) b.querySelector('.v-pre-pr').value = v.prePr;
-                if (v.preBt) b.querySelector('.v-pre-bt').value = v.preBt;
-                if (v.preSp) b.querySelector('.v-pre-sp').value = v.preSp;
-                if (v.postS) b.querySelector('.v-post-s').value = v.postS;
-                if (v.postD) b.querySelector('.v-post-d').value = v.postD;
-                if (v.postPr) b.querySelector('.v-post-pr').value = v.postPr;
-                if (v.postBt) b.querySelector('.v-post-bt').value = v.postBt;
-                if (v.postSp) b.querySelector('.v-post-sp').value = v.postSp;
-            }
-
-            // リハビリ内容の復元
-            if (data.rehabs) {
-                b.querySelectorAll('.rehab-list-body .list-row').forEach(row => {
-                    const chk = row.querySelector('.r-chk'); const s = data.rehabs.find(r => r.n === chk.value);
-                    if (s) { chk.checked = true; row.classList.add('checked-row'); if (s.min !== undefined && s.min !== '') row.querySelector('.r-min').value = s.min; if (s.sec !== undefined && s.sec !== '') row.querySelector('.r-sec').value = s.sec; row.querySelector('.r-c').value = s.c; row.querySelector('.r-s').value = s.s; if (row.querySelector('.r-m') && s.m !== undefined) row.querySelector('.r-m').value = s.m; row.querySelector('.r-nrs').value = s.nrs; row.querySelector('.r-bg').value = s.bg; } else { chk.checked = false; row.classList.remove('checked-row'); }
-                });
-                // チェック済みアイテムを上に並べ替え
-                const body = b.querySelector('.rehab-list-body');
-                const rows = Array.from(body.children);
-                rows.sort((x, y) => (x.querySelector('input').checked === y.querySelector('input').checked) ? 0 : x.querySelector('input').checked ? -1 : 1);
-                rows.forEach(r => body.appendChild(r));
-            }
-
-            // 評価項目の復元
-            if (data.comps) {
-                b.querySelectorAll('.compare-body .compare-row').forEach(row => {
-                    const chk = row.querySelector('.c-chk'); if (!chk) return; const s = data.comps.find(c => c.n === chk.value);
-                    if (s) {
-                        chk.checked = true;
-                        if (s.sd) { const sideEl = row.querySelector('.c-side'); sideEl.value = s.sd; toggleCompSide(sideEl); }
-                        if (s.sd === 'none') {
-                            row.querySelector('.c-val').value = s.l || '';
-                        } else {
-                            if (row.querySelector('.c-l')) row.querySelector('.c-l').value = s.l || '';
-                            if (row.querySelector('.c-r')) row.querySelector('.c-r').value = s.r || '';
-                        }
-                    } else { chk.checked = false; }
-                });
-            }
             // 情報バッジ更新
             updateInfoBadge(el);
         }
@@ -2265,7 +2212,7 @@
                 // ノート出力
                 const fullDis = disSide ? disSide + dis : dis;
                 note += `Case${caseNum}\n`;
-                note += `【${sh}:${sm}〜${eh}:${em}】 ${name}（${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
+                note += `【${sh}:${sm}〜${eh}:${em}】 （${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
 
                 // バイタル（前後）
                 const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
@@ -2853,7 +2800,7 @@
             const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
             let note = `=== アセスメントシート ===\n`;
-            note += `患者: ${name}  記入日: ${date}\n\n`;
+            note += `患者: 匿名  記入日: ${date}\n\n`;
 
             // アセスメントⅠ
             note += `━━ アセスメントⅠ ━━\n\n`;
@@ -2952,7 +2899,7 @@
                 const disSide = b.querySelector('.p-dis-side').value;
                 const ins = b.querySelector('.p-ins').value.trim();
                 const fullDis = disSide ? disSide + dis : dis;
-                note += `Case${caseNum} 【${name}】${fullDis ? ' ' + fullDis : ''}\n`;
+                note += `Case${caseNum}${fullDis ? ' ' + fullDis : ''}\n`;
                 note += ins ? ins + '\n' : '（未記入）\n';
                 note += '\n';
             });
@@ -3112,7 +3059,7 @@
             const hist = JSON.parse(localStorage.getItem(DB_PREFIX + 'soap_' + name)) || [];
             if (!hist.length) { alert('記録がありません'); return; }
             const sorted = [...hist].sort((a, b) => a.date.localeCompare(b.date));
-            let note = `=== ${name} 経過記録（SOAP）全記録 ===\n\n`;
+            let note = `=== 経過記録（SOAP）全記録 ===\n\n`;
             sorted.forEach(entry => {
                 note += `━━ ${entry.date} ━━\n`;
                 if (entry.s) note += `【S：主観的情報】\n${entry.s}\n`;
@@ -3167,7 +3114,7 @@
             const p = document.getElementById('soap-p').value.trim();
 
             let note = `=== 経過記録（SOAP） ===\n`;
-            note += `患者: ${name}  記入日: ${date}\n\n`;
+            note += `患者: 匿名  記入日: ${date}\n\n`;
             if (s) note += `【S：主観的情報】\n${s}\n\n`;
             if (o) note += `【O：客観的情報】\n${o}\n\n`;
             if (a) note += `【A：アセスメント】\n${a}\n\n`;
