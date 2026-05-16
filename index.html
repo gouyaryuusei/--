@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -247,6 +247,15 @@
             display: flex;
             align-items: center;
             cursor: pointer;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .compare-row > div:first-child {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
         }
 
         .list-name input {
@@ -592,19 +601,21 @@
         /* 項目追加・編集ボタン */
         .item-action-btns {
             display: inline-flex;
-            gap: 2px;
-            margin-left: 4px;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
         }
 
         .item-action-btns button {
-            background: none;
+            background: #f1f5f9;
             border: 1px solid #cbd5e1;
-            border-radius: 3px;
-            padding: 1px 4px;
-            font-size: 0.6rem;
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-size: 0.75rem;
             cursor: pointer;
-            color: #64748b;
+            color: #0f172a;
             line-height: 1;
+            display: inline-block;
         }
 
         .item-action-btns button:hover {
@@ -961,7 +972,7 @@
                     <li>本アプリは実習中に知り得た患者情報を記録するツールです。</li>
                     <li>入力された情報はお使いの端末内（ブラウザのlocalStorage）にのみ保存されます。外部サーバーへの送信は一切行いません。</li>
                     <li>患者氏名は匿名（アルファベット）で記録し、個人が特定されないよう配慮してください。</li>
-                    <li>実習終了後は「全リセット」機能でデータを削除してください。</li>
+                    <li>実習終了後などにデータが自動削除されるよう、次の画面で自動削除日を設定してください。</li>
                     <li>端末の紛失・第三者へのアクセス防止のため、適切に管理してください。</li>
                 </ul>
             </div>
@@ -986,8 +997,19 @@
             </label>
             <button id="consent-agree-btn" disabled onclick="agreeConsent()"
                 style="width:100%;padding:14px;background:#94a3b8;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:not-allowed;transition:all 0.2s;">
-                同意して利用を開始する
+                同意して次へ
             </button>
+        </div>
+    </div>
+
+    <!-- データ自動削除日設定モーダル -->
+    <div id="date-setup-modal" class="modal" style="display:none;z-index:9999;">
+        <div class="modal-body" style="max-width:400px;">
+            <h2 style="color:var(--primary);margin-top:0;">📅 データ自動削除日の設定</h2>
+            <p style="font-size:0.9rem;color:#475569;line-height:1.6;">実習終了日などの日付を設定してください。<br>設定した日付以降にアプリを開くと、保存されている患者データが自動で全て削除され、個人情報の消し忘れを防ぎます。</p>
+            <input type="date" id="initialAutoDeleteDate" style="width:100%;padding:12px;margin:15px 0;border:1px solid #cbd5e1;border-radius:6px;font-size:1rem;">
+            <button onclick="finishSetup()" style="width:100%;padding:14px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:1rem;font-weight:bold;cursor:pointer;">設定して使い始める</button>
+            <button onclick="skipSetup()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:#64748b;border:none;font-size:0.85rem;cursor:pointer;text-decoration:underline;">今は設定しない（後でマスター設定から行えます）</button>
         </div>
     </div>
 
@@ -1001,6 +1023,7 @@
             <button onclick="showInsHistory()">📝 学び・備考の履歴</button>
             <button onclick="exportData()">💾 データを保存</button>
             <button onclick="importData()">📂 データを復元</button>
+            <button onclick="showSavedNotesModal()">📁 保存されたノート</button>
             <button onclick="showAssessmentSheet()">📋 アセスメントシート</button>
             <button onclick="showProgressRecord()">📊 経過記録（SOAP）</button>
             <button onclick="confirmReset()" style="color:var(--warning);">⚠️ 全リセット</button>
@@ -1069,6 +1092,43 @@
             </div>
             <div id="ins-history-content" style="max-height:60vh;overflow-y:auto;"></div>
             <button class="close-btn" onclick="closeModal('ins-history-modal')">閉じる</button>
+        </div>
+    </div>
+
+    <!-- 保存されたノートモーダル -->
+    <div id="saved-notes-modal" class="modal">
+        <div class="modal-body">
+            <h2 style="margin:0 0 10px 0;color:var(--primary);">📁 保存されたノート</h2>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+                <button id="tab-daily-notes" onclick="switchSavedNotesTab('daily')" style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:var(--primary);color:white;font-weight:bold;cursor:pointer;">日別デイリーノート</button>
+                <button id="tab-patient-notes" onclick="switchSavedNotesTab('patient')" style="flex:1;padding:8px;border:2px solid var(--primary);border-radius:6px;background:white;color:var(--primary);font-weight:bold;cursor:pointer;">患者別ノート</button>
+            </div>
+            
+            <div id="daily-notes-area">
+                <div style="margin-bottom:10px;">
+                    <label>日付を選択</label>
+                    <select id="saved-daily-date" onchange="loadSavedDailyNote()" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;"></select>
+                </div>
+                <div id="saved-daily-content" contenteditable="true" style="background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem; max-height:50vh; overflow-y:auto;"></div>
+                <button class="note-copy-btn" onclick="copySavedNote('saved-daily-content')" style="width:100%;margin-top:10px;display:block;">📋 コピー</button>
+            </div>
+
+            <div id="patient-notes-area" style="display:none;">
+                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label>患者を選択</label>
+                        <select id="saved-patient-name" onchange="updateSavedPatientDates()" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;"></select>
+                    </div>
+                    <div style="flex:1;">
+                        <label>日付を選択</label>
+                        <select id="saved-patient-date" onchange="loadSavedPatientNote()" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:4px;"></select>
+                    </div>
+                </div>
+                <div id="saved-patient-content" contenteditable="true" style="background:#1e293b; color:#f8fafc; padding:15px; border-radius:8px; white-space:pre-wrap; font-family:monospace; font-size:0.85rem; max-height:50vh; overflow-y:auto;"></div>
+                <button class="note-copy-btn" onclick="copySavedNote('saved-patient-content')" style="width:100%;margin-top:10px;display:block;">📋 コピー</button>
+            </div>
+
+            <button class="close-btn" onclick="closeModal('saved-notes-modal')">閉じる</button>
         </div>
     </div>
 
@@ -1331,7 +1391,7 @@
     </div>
 
     <div class="container">
-        <h1>PT実習ノート：究極コンプリート版</h1>
+        <h1>PT実習ノート</h1>
         <div id="warning-box"></div>
         <div style="margin-bottom: 15px;"><label>実習日</label><input type="date" id="dateInput"></div>
 
@@ -1381,32 +1441,39 @@
                 <div class="col">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <label style="margin:0;">疾患リスト</label>
-                        <button onclick="sortConfig('masterDiseases')"
-                            style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;"
-                            title="五十音順に並べ替え">A-Z 並べ替え</button>
+                        <div>
+                            <button onclick="sortConfigByFrequency('masterDiseases', 'disease')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="よく使う順に並べ替え">⭐ よく使う順</button>
+                            <button onclick="sortConfig('masterDiseases')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="五十音順に並べ替え">A-Z</button>
+                        </div>
                     </div>
-                    <textarea id="masterDiseases" rows="4" oninput="saveConfig()"
-                        style="width:100%;">大腿骨転子部骨折&#13;脳梗塞&#13;肺炎後廃用症候群&#13;脊柱管狭窄症</textarea>
+                    <textarea id="masterDiseases" rows="4" oninput="saveConfig()" style="width:100%;">大腿骨転子部骨折&#13;脳梗塞&#13;肺炎後廃用症候群&#13;脊柱管狭窄症</textarea>
                 </div>
                 <div class="col">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <label style="margin:0;">リハメニュー</label>
-                        <button onclick="sortConfig('masterRehabs')"
-                            style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;"
-                            title="五十音順に並べ替え">A-Z 並べ替え</button>
+                        <div>
+                            <button onclick="sortConfigByFrequency('masterRehabs', 'rehab')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="よく使う順に並べ替え">⭐ よく使う順</button>
+                            <button onclick="sortConfig('masterRehabs')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="五十音順に並べ替え">A-Z</button>
+                        </div>
                     </div>
-                    <textarea id="masterRehabs" rows="4" oninput="saveConfig()"
-                        style="width:100%;">下肢リラクゼーション&#13;お尻上げ&#13;歩行訓練&#13;起立訓練&#13;端坐位保持</textarea>
+                    <textarea id="masterRehabs" rows="4" oninput="saveConfig()" style="width:100%;">下肢リラクゼーション&#13;お尻上げ&#13;歩行訓練&#13;起立訓練&#13;端坐位保持</textarea>
                 </div>
                 <div class="col">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <label style="margin:0;">評価項目 (名称:単位)</label>
-                        <button onclick="sortConfig('masterCompare')"
-                            style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;"
-                            title="五十音順に並べ替え">A-Z 並べ替え</button>
+                        <div>
+                            <button onclick="sortConfigByFrequency('masterCompare', 'compare')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="よく使う順に並べ替え">⭐ よく使う順</button>
+                            <button onclick="sortConfig('masterCompare')" style="font-size:0.7rem; padding:2px 6px; border-radius:4px; border:1px solid #cbd5e1; background:white; cursor:pointer;" title="五十音順に並べ替え">A-Z</button>
+                        </div>
                     </div>
-                    <textarea id="masterCompare" rows="4" oninput="saveConfig()"
-                        style="width:100%;">MMT(腸腰筋):段階&#13;ROM(股屈曲):°&#13;BBS:点&#13;TUG:秒</textarea>
+                    <textarea id="masterCompare" rows="4" oninput="saveConfig()" style="width:100%;">MMT(腸腰筋):段階&#13;ROM(股屈曲):°&#13;BBS:点&#13;TUG:秒</textarea>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e1;">
+                <label style="color:var(--warning);">🗑️ データ自動削除日 (実習終了日などを設定)</label>
+                <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                    <input type="date" id="autoDeleteDate" onchange="saveConfig()" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;">
+                    <span style="font-size:0.8rem; color:#64748b;">※設定した日付以降にアプリを開くと、患者データが自動で全て削除されます。</span>
                 </div>
             </div>
         </div>
@@ -1439,12 +1506,102 @@
             saveConfig();
         }
 
+        function getFrequencies() {
+            const freqs = { diseases: {}, rehabs: {}, comps: {} };
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(DB_PREFIX + 'full_mem_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(k));
+                        if (data && data.p && data.p.dis) {
+                            freqs.diseases[data.p.dis] = (freqs.diseases[data.p.dis] || 0) + 1;
+                        }
+                        if (data && data.rehabs) {
+                            data.rehabs.forEach(r => { freqs.rehabs[r.n] = (freqs.rehabs[r.n] || 0) + 1; });
+                        }
+                        if (data && data.comps) {
+                            data.comps.forEach(c => { freqs.comps[c.n] = (freqs.comps[c.n] || 0) + 1; });
+                        }
+                    } catch(e) {}
+                }
+            }
+            document.querySelectorAll('.patient-block').forEach(b => {
+                if (b.classList.contains('break-block')) return;
+                const dis = b.querySelector('.p-disease') ? b.querySelector('.p-disease').value : '';
+                if (dis) freqs.diseases[dis] = (freqs.diseases[dis] || 0) + 1;
+                b.querySelectorAll('.r-chk:checked').forEach(c => { freqs.rehabs[c.value] = (freqs.rehabs[c.value] || 0) + 1; });
+                b.querySelectorAll('.c-chk:checked').forEach(c => { freqs.comps[c.value] = (freqs.comps[c.value] || 0) + 1; });
+            });
+            return freqs;
+        }
+
+        function sortConfigByFrequency(id, type) {
+            if (!confirm('よく使う順（使用頻度順）に並べ替えますか？')) return;
+            const el = document.getElementById(id);
+            const lines = el.value.split('\n').map(l => l.trim()).filter(l => l);
+            const freqs = getFrequencies();
+            
+            lines.sort((a, b) => {
+                let fa = 0, fb = 0;
+                if (type === 'disease') { fa = freqs.diseases[a] || 0; fb = freqs.diseases[b] || 0; }
+                else if (type === 'rehab') { fa = freqs.rehabs[a] || 0; fb = freqs.rehabs[b] || 0; }
+                else if (type === 'compare') { 
+                    const nameA = a.split(':')[0]; const nameB = b.split(':')[0];
+                    fa = freqs.comps[nameA] || 0; fb = freqs.comps[nameB] || 0; 
+                }
+                if (fb !== fa) return fb - fa; // descending frequency
+                return a.localeCompare(b, 'ja'); // alphabetical fallback
+            });
+            el.value = lines.join('\n');
+            saveConfig();
+        }
+
         function saveConfig() {
-            localStorage.setItem(DB_PREFIX + 'config', JSON.stringify({ diseases: document.getElementById('masterDiseases').value, rehabs: document.getElementById('masterRehabs').value, compare: document.getElementById('masterCompare').value }));
+            localStorage.setItem(DB_PREFIX + 'config', JSON.stringify({ 
+                diseases: document.getElementById('masterDiseases').value, 
+                rehabs: document.getElementById('masterRehabs').value, 
+                compare: document.getElementById('masterCompare').value,
+                autoDeleteDate: document.getElementById('autoDeleteDate') ? document.getElementById('autoDeleteDate').value : ''
+            }));
             syncMasterToBlocks();
             updateDiseaseSearchOptions();
         }
-        function loadConfig() { const c = JSON.parse(localStorage.getItem(DB_PREFIX + 'config')); if (c) { document.getElementById('masterDiseases').value = c.diseases; document.getElementById('masterRehabs').value = c.rehabs; document.getElementById('masterCompare').value = c.compare; } }
+        function loadConfig() { 
+            const cStr = localStorage.getItem(DB_PREFIX + 'config');
+            if (cStr) { 
+                const c = JSON.parse(cStr);
+                if (c.diseases) document.getElementById('masterDiseases').value = c.diseases; 
+                if (c.rehabs) document.getElementById('masterRehabs').value = c.rehabs; 
+                if (c.compare) document.getElementById('masterCompare').value = c.compare; 
+                if (c.autoDeleteDate && document.getElementById('autoDeleteDate')) document.getElementById('autoDeleteDate').value = c.autoDeleteDate;
+            } 
+        }
+
+        function checkAutoDelete() {
+            try {
+                const cStr = localStorage.getItem(DB_PREFIX + 'config');
+                if (cStr) {
+                    const c = JSON.parse(cStr);
+                    if (c.autoDeleteDate) {
+                        const today = new Date().toISOString().split('T')[0];
+                        if (today >= c.autoDeleteDate) {
+                            const keysToRemove = [];
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const k = localStorage.key(i);
+                                if (k.startsWith(DB_PREFIX) && k !== DB_PREFIX + 'config' && k !== DB_PREFIX + 'darkMode' && k !== DB_PREFIX + 'consent') {
+                                    keysToRemove.push(k);
+                                }
+                            }
+                            keysToRemove.forEach(k => localStorage.removeItem(k));
+                            c.autoDeleteDate = '';
+                            if (document.getElementById('autoDeleteDate')) document.getElementById('autoDeleteDate').value = '';
+                            localStorage.setItem(DB_PREFIX + 'config', JSON.stringify(c));
+                            alert('【お知らせ】設定された「データ自動削除日」を迎えたため、患者データを全て削除しました。\n（※マスター設定は保持されています）');
+                        }
+                    }
+                }
+            } catch(e){}
+        }
 
         function syncMasterToBlocks() {
             const diseases = document.getElementById('masterDiseases').value.split('\n').filter(v => v);
@@ -1484,7 +1641,7 @@
                     };
                 });
                 // 再構築
-                rehabBody.innerHTML = rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><select class="r-min" style="font-size:12px;padding:4px;"><option value="">-分</option>${Array.from({ length: 19 }, (_, i) => `<option value="${i * 5}">${i * 5}分</option>`).join('')}</select><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-m" style="width:36px;padding:4px;font-size:12px;" placeholder="m"><span style="font-size:11px;">m</span></div><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('');
+                rehabBody.innerHTML = rehabs.map(r => buildRehabRowHtml(r)).join('');
                 // 保存した入力状態を復元
                 rehabBody.querySelectorAll('.list-row').forEach(row => {
                     const chk = row.querySelector('.r-chk');
@@ -1522,10 +1679,7 @@
                 });
                 // 再構築
                 compBody.innerHTML = `<div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>` +
-                    compares.map(item => {
-                        const [n, u] = item.split(':');
-                        return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
-                    }).join('');
+                    compares.map(item => buildCompRowHtml(item)).join('');
                 // 保存した入力状態を復元
                 compBody.querySelectorAll('.compare-row').forEach(row => {
                     const chk = row.querySelector('.c-chk');
@@ -1832,11 +1986,43 @@
             updateNameOptions(name, memo);
         }
 
+        function getPatientInfoForSelect(name) {
+            let age = '', sex = '';
+            document.querySelectorAll('.patient-block').forEach(b => {
+                const bName = b.querySelector('.p-name') ? b.querySelector('.p-name').value : '';
+                if (bName === name && !b.classList.contains('break-block')) {
+                    const a = b.querySelector('.p-age') ? b.querySelector('.p-age').value : '';
+                    const s = b.querySelector('.p-sex') ? b.querySelector('.p-sex').value : '';
+                    if (!(a === '年齢不明' && (!s || s === ''))) {
+                        age = a;
+                        sex = s;
+                    }
+                }
+            });
+            if (!age && !sex) {
+                try {
+                    const saved = localStorage.getItem(DB_PREFIX + 'full_mem_' + name);
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        if (data.p) { age = data.p.age || ''; sex = data.p.sex || ''; }
+                    }
+                } catch(e){}
+            }
+            return {age, sex};
+        }
+
         // 全 p-name セレクトの option[value=name] のテキストを更新
         function updateNameOptions(name, memo) {
+            const {age, sex} = getPatientInfoForSelect(name);
             document.querySelectorAll('.p-name option').forEach(opt => {
                 if (opt.value === name) {
-                    opt.textContent = memo ? name + '  📝' + memo : name;
+                    let text = name;
+                    let info = [];
+                    if(age && age !== '年齢不明') info.push(age);
+                    if(sex) info.push(sex);
+                    if(info.length > 0) text += ` (${info.join('・')})`;
+                    if (memo) text += '  📝' + memo;
+                    opt.textContent = text;
                 }
             });
         }
@@ -1844,9 +2030,16 @@
         // 新しいブロックのセレクトに保存済みメモを反映
         function applyMemosToSelect(selectEl) {
             selectEl.querySelectorAll('option').forEach(opt => {
-                if (opt.value === '休憩時間') return;
+                if (opt.value === '休憩時間' || opt.value === 'free' || opt.dataset.isBreak === 'true') return;
                 const memo = localStorage.getItem(DB_PREFIX + 'pmemo_' + opt.value) || '';
-                opt.textContent = memo ? opt.value + '  📝' + memo : opt.value;
+                const {age, sex} = getPatientInfoForSelect(opt.value);
+                let text = opt.value;
+                let info = [];
+                if(age && age !== '年齢不明') info.push(age);
+                if(sex) info.push(sex);
+                if(info.length > 0) text += ` (${info.join('・')})`;
+                if(memo) text += `  📝${memo}`;
+                opt.textContent = text;
             });
         }
 
@@ -1901,6 +2094,12 @@
             if (sex) html += `<span class="badge-item">${escHtml(sex)}</span>`;
             if (dis) html += `<span class="badge-item badge-disease">${escHtml(dis)}</span>`;
             badge.innerHTML = html;
+
+            const name = b.querySelector('.p-name') ? b.querySelector('.p-name').value : '';
+            if (name && name !== '休憩時間' && name !== 'free' && !b.classList.contains('break-block')) {
+                const memo = localStorage.getItem(DB_PREFIX + 'pmemo_' + name) || '';
+                updateNameOptions(name, memo);
+            }
         }
 
         // === localStorageから全患者データを取得 ===
@@ -2089,22 +2288,40 @@
             const oldName = chk.value;
             const newName = prompt('新しい名前を入力:', oldName);
             if (!newName || !newName.trim() || newName.trim() === oldName) return;
-            chk.value = newName.trim();
+            const trimmedNewName = newName.trim();
+            chk.value = trimmedNewName;
             const label = row.querySelector('.list-name');
             // テキストノードを更新
             label.childNodes.forEach(node => {
                 if (node.nodeType === 3 && node.textContent.trim() === oldName) {
-                    node.textContent = newName.trim();
+                    node.textContent = trimmedNewName;
                 }
             });
+
+            // マスター設定の更新
+            const masterEl = document.getElementById('masterRehabs');
+            const items = masterEl.value.split('\n').filter(v => v);
+            const idx = items.indexOf(oldName);
+            if (idx !== -1) {
+                items[idx] = trimmedNewName;
+                masterEl.value = items.join('\n');
+                saveConfig();
+            }
         }
 
         // === リハ項目削除 ===
         function deleteRehabItem(btn) {
             const row = btn.closest('.list-row');
             const name = row.querySelector('.r-chk').value;
-            if (!confirm(`「${name}」を削除しますか？`)) return;
+            if (!confirm(`「${name}」を削除しますか？\n※マスター設定からも削除され、アプリ全体に反映されます。`)) return;
             row.remove();
+            
+            // マスター設定の更新
+            const masterEl = document.getElementById('masterRehabs');
+            let items = masterEl.value.split('\n').filter(v => v);
+            items = items.filter(i => i !== name);
+            masterEl.value = items.join('\n');
+            saveConfig();
         }
 
         // === 検査項目追加 ===
@@ -2138,7 +2355,8 @@
             const chk = row.querySelector('.c-chk');
             const oldName = chk.value;
             const oldUnit = chk.dataset.unit || '';
-            const newInput = prompt('新しい項目名:単位を入力 (例: BBS:点):', oldName + (oldUnit ? ':' + oldUnit : ''));
+            const oldFullName = oldName + (oldUnit ? ':' + oldUnit : '');
+            const newInput = prompt('新しい項目名:単位を入力 (例: BBS:点):', oldFullName);
             if (!newInput || !newInput.trim()) return;
             const [newName, newUnit] = newInput.trim().split(':');
             chk.value = newName;
@@ -2153,14 +2371,34 @@
             // 単位を更新
             const unitDiv = row.querySelector('div[style*="grid-column:5"]');
             if (unitDiv) unitDiv.textContent = newUnit || '';
+
+            // マスター設定の更新
+            const masterEl = document.getElementById('masterCompare');
+            const items = masterEl.value.split('\n').filter(v => v);
+            const idx = items.indexOf(oldFullName);
+            if (idx !== -1) {
+                items[idx] = newName + (newUnit ? ':' + newUnit : '');
+                masterEl.value = items.join('\n');
+                saveConfig();
+            }
         }
 
         // === 検査項目削除 ===
         function deleteCompItem(btn) {
             const row = btn.closest('.compare-row');
-            const name = row.querySelector('.c-chk').value;
-            if (!confirm(`「${name}」を削除しますか？`)) return;
+            const chk = row.querySelector('.c-chk');
+            const name = chk.value;
+            const unit = chk.dataset.unit || '';
+            const fullName = name + (unit ? ':' + unit : '');
+            if (!confirm(`「${name}」を削除しますか？\n※マスター設定からも削除され、アプリ全体に反映されます。`)) return;
             row.remove();
+
+            // マスター設定の更新
+            const masterEl = document.getElementById('masterCompare');
+            let items = masterEl.value.split('\n').filter(v => v);
+            items = items.filter(i => i !== fullName);
+            masterEl.value = items.join('\n');
+            saveConfig();
         }
 
         // === 疾患追加 ===
@@ -2305,7 +2543,7 @@
         function generateNote() {
             generateInsNote(false);
             const date = document.getElementById('dateInput').value; let note = `理学療法実習 デイリーノート (${date})\n\n`;
-            let warnings = []; let lastT = -1; let caseNum = 0;
+            let warnings = []; let lastT = -1; let caseNum = 0; let pNotesToSave = {};
 
             document.querySelectorAll('.patient-block').forEach(b => {
                 const name = b.querySelector('.p-name').value; const sh = b.querySelector('.p-sh').value, sm = b.querySelector('.p-sm').value, eh = b.querySelector('.p-eh').value, em = b.querySelector('.p-em').value;
@@ -2384,34 +2622,38 @@
 
                 // ノート出力
                 const fullDis = disSide ? disSide + dis : dis;
-                note += `Case${caseNum}\n`;
-                note += `【${sh}:${sm}〜${eh}:${em}】 （${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
+                let pNote = `Case${caseNum}\n`;
+                pNote += `【${sh}:${sm}〜${eh}:${em}】 （${age}${sex ? '・' + sex : ''}） 疾患：${fullDis}\n`;
 
                 // バイタル（前後）
                 const vPreS = b.querySelector('.v-pre-s').value, vPreD = b.querySelector('.v-pre-d').value;
                 const vPrePrV = b.querySelector('.v-pre-pr').value, vPreBt = b.querySelector('.v-pre-bt').value, vPreSp = b.querySelector('.v-pre-sp').value;
                 const vPostS = b.querySelector('.v-post-s').value, vPostD = b.querySelector('.v-post-d').value;
                 const vPostPr = b.querySelector('.v-post-pr').value, vPostBt = b.querySelector('.v-post-bt').value, vPostSp = b.querySelector('.v-post-sp').value;
-                if (vPreS) note += `前) BP:${vPreS}/${vPreD} PR:${vPrePrV} BT:${vPreBt || '-'}℃ SpO2:${vPreSp || '-'}%\n`;
-                if (vPostS) note += `後) BP:${vPostS}/${vPostD} PR:${vPostPr} BT:${vPostBt || '-'}℃ SpO2:${vPostSp || '-'}%\n`;
+                if (vPreS) pNote += `前) BP:${vPreS}/${vPreD} PR:${vPrePrV} BT:${vPreBt || '-'}℃ SpO2:${vPreSp || '-'}%\n`;
+                if (vPostS) pNote += `後) BP:${vPostS}/${vPostD} PR:${vPostPr} BT:${vPostBt || '-'}℃ SpO2:${vPostSp || '-'}%\n`;
 
                 // 高次脳・補助具
-                if (hbS === 'あり') note += `高次脳機能障害: ${hbD || '詳細未記入'}\n`;
-                if (dsS === 'あり') note += `補助具: ${dsD || '詳細未記入'}\n`;
+                if (hbS === 'あり') pNote += `高次脳機能障害: ${hbD || '詳細未記入'}\n`;
+                if (dsS === 'あり') pNote += `補助具: ${dsD || '詳細未記入'}\n`;
 
                 // リハ内容（時間・Borg含む）
-                if (sessionRehabs.length) note += `内容:\n${sessionRehabs.map(r => { let parts = []; if (r.min && r.min !== '' && r.min !== '0') parts.push(`${r.min}分`); if (r.c !== '0' && r.c !== '') parts.push(`${r.c}回`); if (r.s !== '0' && r.s !== '') parts.push(`${r.s}set`); if (r.m && r.m !== '') parts.push(`${r.m}m`); if (r.nrs && r.nrs !== '') parts.push(`NRS:${r.nrs}`); if (r.bg && r.bg !== '') parts.push(`Borg:${r.bg}`); return ` ・${r.n}${parts.length ? ' ' + parts.join(' ') : ''}`; }).join('\n')}\n`;
+                if (sessionRehabs.length) pNote += `内容:\n${sessionRehabs.map(r => { let parts = []; if (r.min && r.min !== '' && r.min !== '0') parts.push(`${r.min}分`); if (r.c !== '0' && r.c !== '') parts.push(`${r.c}回`); if (r.s !== '0' && r.s !== '') parts.push(`${r.s}set`); if (r.m && r.m !== '') parts.push(`${r.m}m`); if (r.nrs && r.nrs !== '') parts.push(`NRS:${r.nrs}`); if (r.bg && r.bg !== '') parts.push(`Borg:${r.bg}`); return ` ・${r.n}${parts.length ? ' ' + parts.join(' ') : ''}`; }).join('\n')}\n`;
 
                 // 評価項目（左右・単位）
-                if (sessionComps.length) note += `評価:\n${sessionComps.map(c => {
+                if (sessionComps.length) pNote += `評価:\n${sessionComps.map(c => {
                     if (c.sd === 'lr') return ` ・${c.n}: 左${c.l || '-'} / 右${c.r || '-'} ${c.u}`;
                     if (c.sd === 'l') return ` ・${c.n}: 左${c.l || '-'} ${c.u}`;
                     if (c.sd === 'r') return ` ・${c.n}: 右${c.r || '-'} ${c.u}`;
                     return ` ・${c.n}: ${c.l || c.r || '-'} ${c.u}`;
                 }).join('\n')}\n`;
 
-                if (b.querySelector('.p-rem').value) note += `備考: ${b.querySelector('.p-rem').value}\n`;
-                note += `\n`;
+                if (b.querySelector('.p-rem').value) pNote += `備考: ${b.querySelector('.p-rem').value}\n`;
+                pNote += `\n`;
+
+                note += pNote;
+                if (!pNotesToSave[name]) pNotesToSave[name] = "";
+                pNotesToSave[name] += pNote;
 
                 // 症例患者の場合、SOAP経過記録に自動保存
                 const caseChk = b.querySelector('.case-chk');
@@ -2441,6 +2683,15 @@
             });
 
             if (warnings.length > 0 && !confirm("警告があります。出力しますか？\n" + warnings.join("\n"))) return;
+
+            for (const [pName, pNote] of Object.entries(pNotesToSave)) {
+                let pNotes = JSON.parse(localStorage.getItem(DB_PREFIX + 'pnote_' + pName)) || [];
+                const pIdx = pNotes.findIndex(n => n.date === date);
+                if (pIdx >= 0) { pNotes[pIdx].note = pNote; } else { pNotes.push({date: date, note: pNote}); }
+                localStorage.setItem(DB_PREFIX + 'pnote_' + pName, JSON.stringify(pNotes));
+            }
+            localStorage.setItem(DB_PREFIX + 'daily_note_' + date, note);
+
             document.getElementById('output').innerText = note; document.getElementById('output').style.display = 'block';
             document.getElementById('copy-note-btn').style.display = 'inline-block';
             if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2799,11 +3050,31 @@
             }
         }
         function agreeConsent() {
-            localStorage.setItem(DB_PREFIX + 'consent', '1');
             document.getElementById('consent-modal').style.display = 'none';
+            document.getElementById('date-setup-modal').style.display = 'block';
+            const defaultDate = new Date();
+            defaultDate.setMonth(defaultDate.getMonth() + 2);
+            document.getElementById('initialAutoDeleteDate').valueAsDate = defaultDate;
+        }
+
+        function finishSetup() {
+            const dateVal = document.getElementById('initialAutoDeleteDate').value;
+            if (dateVal) {
+                const autoDeleteInput = document.getElementById('autoDeleteDate');
+                if (autoDeleteInput) autoDeleteInput.value = dateVal;
+                saveConfig();
+            }
+            localStorage.setItem(DB_PREFIX + 'consent', '1');
+            document.getElementById('date-setup-modal').style.display = 'none';
+        }
+
+        function skipSetup() {
+            localStorage.setItem(DB_PREFIX + 'consent', '1');
+            document.getElementById('date-setup-modal').style.display = 'none';
         }
 
         window.onload = () => {
+            checkAutoDelete();
             loadConfig();
             document.getElementById('dateInput').valueAsDate = new Date();
             // ダークモード復元
@@ -3299,6 +3570,91 @@
                 navigator.clipboard.writeText(note).then(() => alert('経過記録を出力し、クリップボードにコピーしました！')).catch(() => alert('経過記録を出力しました！'));
             } else {
                 alert('経過記録を出力しました！');
+            }
+        }
+
+        // === 保存されたノート機能 ===
+        function showSavedNotesModal() {
+            const menu = document.getElementById('nav-menu');
+            if(menu) menu.style.display = 'none';
+            
+            const dailySel = document.getElementById('saved-daily-date');
+            dailySel.innerHTML = '<option value="">-- 日付を選択 --</option>';
+            const dailyKeys = [];
+            for(let i=0; i<localStorage.length; i++) {
+                if(localStorage.key(i).startsWith(DB_PREFIX + 'daily_note_')) {
+                    dailyKeys.push(localStorage.key(i).replace(DB_PREFIX + 'daily_note_', ''));
+                }
+            }
+            dailyKeys.sort().reverse().forEach(d => {
+                dailySel.innerHTML += `<option value="${d}">${d}</option>`;
+            });
+
+            const patientSel = document.getElementById('saved-patient-name');
+            patientSel.innerHTML = '<option value="">-- 患者を選択 --</option>';
+            const pNames = [];
+            for(let i=0; i<localStorage.length; i++) {
+                if(localStorage.key(i).startsWith(DB_PREFIX + 'pnote_')) {
+                    pNames.push(localStorage.key(i).replace(DB_PREFIX + 'pnote_', ''));
+                }
+            }
+            pNames.sort().forEach(p => {
+                patientSel.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+
+            document.getElementById('saved-daily-content').innerText = '';
+            document.getElementById('saved-patient-content').innerText = '';
+            document.getElementById('saved-patient-date').innerHTML = '<option value="">-- 日付を選択 --</option>';
+
+            switchSavedNotesTab('daily');
+            document.getElementById('saved-notes-modal').style.display = 'block';
+        }
+
+        function switchSavedNotesTab(tab) {
+            document.getElementById('daily-notes-area').style.display = tab === 'daily' ? 'block' : 'none';
+            document.getElementById('patient-notes-area').style.display = tab === 'patient' ? 'block' : 'none';
+            document.getElementById('tab-daily-notes').style.background = tab === 'daily' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-daily-notes').style.color = tab === 'daily' ? 'white' : 'var(--primary)';
+            document.getElementById('tab-patient-notes').style.background = tab === 'patient' ? 'var(--primary)' : 'white';
+            document.getElementById('tab-patient-notes').style.color = tab === 'patient' ? 'white' : 'var(--primary)';
+        }
+
+        function loadSavedDailyNote() {
+            const d = document.getElementById('saved-daily-date').value;
+            const content = document.getElementById('saved-daily-content');
+            if(!d) { content.innerText = ''; return; }
+            content.innerText = localStorage.getItem(DB_PREFIX + 'daily_note_' + d) || '';
+        }
+
+        function updateSavedPatientDates() {
+            const p = document.getElementById('saved-patient-name').value;
+            const dateSel = document.getElementById('saved-patient-date');
+            dateSel.innerHTML = '<option value="">-- 日付を選択 --</option>';
+            document.getElementById('saved-patient-content').innerText = '';
+            if(!p) return;
+            const notes = JSON.parse(localStorage.getItem(DB_PREFIX + 'pnote_' + p)) || [];
+            notes.sort((a,b) => b.date.localeCompare(a.date)).forEach(n => {
+                dateSel.innerHTML += `<option value="${n.date}">${n.date}</option>`;
+            });
+        }
+
+        function loadSavedPatientNote() {
+            const p = document.getElementById('saved-patient-name').value;
+            const d = document.getElementById('saved-patient-date').value;
+            const content = document.getElementById('saved-patient-content');
+            if(!p || !d) { content.innerText = ''; return; }
+            const notes = JSON.parse(localStorage.getItem(DB_PREFIX + 'pnote_' + p)) || [];
+            const note = notes.find(n => n.date === d);
+            content.innerText = note ? note.note : '';
+        }
+
+        function copySavedNote(id) {
+            const text = document.getElementById(id).innerText;
+            if(!text) return;
+            if(navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => alert('コピーしました')).catch(() => alert('コピーに失敗しました。手動でコピーしてください'));
+            } else {
+                alert('手動でコピーしてください');
             }
         }
 
