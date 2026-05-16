@@ -1641,7 +1641,7 @@
                     };
                 });
                 // 再構築
-                rehabBody.innerHTML = rehabs.map(r => buildRehabRowHtml(r)).join('');
+                rehabBody.innerHTML = rehabs.map(r => `<div class="list-row rehab-grid"><label class="list-name"><input type="checkbox" class="r-chk" value="${r}" onchange="sortR(this)">${r}</label><select class="r-min" style="font-size:12px;padding:4px;"><option value="">-分</option>${Array.from({ length: 19 }, (_, i) => `<option value="${i * 5}">${i * 5}分</option>`).join('')}</select><select class="r-c">${Array.from({ length: 61 }, (_, i) => `<option value="${i}">${i}回</option>`).join('')}</select><select class="r-s">${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}set</option>`).join('')}</select><div style="display:flex;gap:2px;align-items:center;"><input type="text" class="r-m" style="width:36px;padding:4px;font-size:12px;" placeholder="m"><span style="font-size:11px;">m</span></div><select class="r-nrs"><option value="">-NRS</option>${Array.from({ length: 11 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select><select class="r-bg"><option value="">-Borg</option>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>`).join('');
                 // 保存した入力状態を復元
                 rehabBody.querySelectorAll('.list-row').forEach(row => {
                     const chk = row.querySelector('.r-chk');
@@ -1679,7 +1679,10 @@
                 });
                 // 再構築
                 compBody.innerHTML = `<div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>` +
-                    compares.map(item => buildCompRowHtml(item)).join('');
+                    compares.map(item => {
+                        const [n, u] = item.split(':');
+                        return `<div class="compare-row"><div><input type="checkbox" class="c-chk" value="${n}" data-unit="${u || ''}"> ${n}</div><select class="c-side" onchange="toggleCompSide(this)" style="font-size:11px;padding:4px;"><option value="lr">左右</option><option value="l">左のみ</option><option value="r">右のみ</option><option value="none">なし</option></select><input type="text" class="c-r in-r" style="grid-column:3"><input type="text" class="c-l in-l" style="grid-column:4"><input type="text" class="c-val" style="display:none;grid-column:3/5"><div style="grid-column:5">${u || ''}</div></div>`;
+                    }).join('');
                 // 保存した入力状態を復元
                 compBody.querySelectorAll('.compare-row').forEach(row => {
                     const chk = row.querySelector('.c-chk');
@@ -2462,11 +2465,25 @@
 
             <div class="row"><div class="col"><div class="section-header"><label>💬 備考</label><button class="section-reset-btn" onclick="resetTextarea(this, '.p-rem')">リセット</button></div><textarea class="p-rem" rows="3"></textarea></div></div>
 
-            <div class="section-header"><label>📋 リハ内容検索</label><button class="section-reset-btn" onclick="resetRehabs(this)">リセット</button></div>
+            <div class="section-header">
+                <label>📋 リハ内容検索</label>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="section-reset-btn" onclick="sortConfigByFrequency('masterRehabs', 'rehab')" style="color:#0f172a; border-color:#94a3b8;" title="よく使う順に並べ替え">⭐ 頻度順</button>
+                    <button type="button" class="section-reset-btn" onclick="sortConfig('masterRehabs')" style="color:#0f172a; border-color:#94a3b8;" title="五十音順に並べ替え">A-Z</button>
+                    <button class="section-reset-btn" onclick="resetRehabs(this)">リセット</button>
+                </div>
+            </div>
             <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'rehab-list-body')">
             <div class="list-container"><div class="rehab-list-body">${rehabs.map(r => buildRehabRowHtml(r)).join('')}</div><button class="add-item-btn" onclick="addRehabItem(this)">＋ リハ項目を追加</button></div>
 
-            <div class="section-header"><label>⚖️ 左右評価・検査検索</label><button class="section-reset-btn" onclick="resetComps(this)">リセット</button></div>
+            <div class="section-header">
+                <label>⚖️ 左右評価・検査検索</label>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="section-reset-btn" onclick="sortConfigByFrequency('masterCompare', 'compare')" style="color:#0f172a; border-color:#94a3b8;" title="よく使う順に並べ替え">⭐ 頻度順</button>
+                    <button type="button" class="section-reset-btn" onclick="sortConfig('masterCompare')" style="color:#0f172a; border-color:#94a3b8;" title="五十音順に並べ替え">A-Z</button>
+                    <button class="section-reset-btn" onclick="resetComps(this)">リセット</button>
+                </div>
+            </div>
             <input type="text" class="search-input" placeholder="検索..." oninput="filterList(this, 'compare-body')">
             <div class="compare-container"><div class="compare-body">
                 <div class="compare-row" style="background:#fef3c7; font-weight:bold;"><div>項目</div><div>側</div><div>右</div><div>左</div><div>単位</div></div>
